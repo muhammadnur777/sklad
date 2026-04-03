@@ -1,0 +1,153 @@
+{% extends 'base_bozor.html' %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 550px;
+        margin: 20px auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .form-card h2 {
+        margin-bottom: 20px;
+        color: #1a1a2e;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #28a745;
+        outline: none;
+    }
+    .form-row {
+        display: flex;
+        gap: 12px;
+    }
+    .form-row .form-group {
+        flex: 1;
+    }
+    .calc-info {
+        color: #888;
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn-save {
+        padding: 10px 30px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-save:hover { background: #218838; }
+    .btn-cancel {
+        padding: 10px 30px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <h2>Yangi tovar qo'shish — {{ shop.name }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Tovar nomi</label>
+            <input type="text" name="name" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Kategoriya</label>
+                <select name="category" required>
+                    <option value="">Tanlang...</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>O'lchov birligi</label>
+                <select name="unit" required>
+                    <option value="">Tanlang...</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}">{{ unit.name }} ({{ unit.short_name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Sotish narxi (so'm) (bittasini)</label>
+            <input type="number" name="sell_price" required oninput="formatPrice(this)">
+            <div style="color:#888; font-size:13px; margin-top:4px;" id="priceDisplay"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Boshlang'ich qoldiq (korobka)</label>
+                <input type="number" name="stock" id="boxQty" oninput="calcDona()" required>
+            </div>
+            <div class="form-group">
+                <label>1 korobkada nechta</label>
+                <input type="number" name="per_box" id="perBox" value="1" oninput="calcDona()">
+            </div>
+        </div>
+        <div class="calc-info" id="calcInfo"></div>
+        <div class="form-actions">
+            <button type="submit" class="btn-save">Saqlash</button>
+            <a href="/bozor/{{ shop.id }}/" class="btn-cancel">Bekor</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calcDona() {
+    var boxes = parseInt(document.getElementById('boxQty').value) || 0;
+    var perBox = parseInt(document.getElementById('perBox').value) || 1;
+    var dona = boxes * perBox;
+    document.getElementById('calcInfo').textContent = boxes + ' korobka × ' + perBox + ' = ' + dona + ' dona';
+}
+
+function formatPrice(input) {
+    var display = document.getElementById('priceDisplay');
+    if (input.value) {
+        var num = parseInt(input.value);
+        display.textContent = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm";
+    } else {
+        display.textContent = '';
+    }
+}
+</script>
+{% endblock %}

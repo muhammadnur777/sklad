@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKLAD — Ruxsat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .block-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 50px 40px;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .block-box h2 {
+            color: #e94560;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .block-box p {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .block-box input[type="password"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 8px;
+            outline: none;
+        }
+        .block-box input:focus { border-color: #e94560; }
+        .block-box button {
+            width: 100%;
+            padding: 14px;
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        .block-box button:hover { background: #c73650; }
+        .block-box .back-link {
+            display: block;
+            margin-top: 16px;
+            color: #888;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .error { color: #e94560; font-size: 14px; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="block-box">
+        <h2>Sklad</h2>
+        <p>Bu bo'limga kirish uchun sklad parolini kiriting</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="password" name="sklad_password" placeholder="• • • •" autofocus>
+            <button type="submit">Kirish</button>
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+        </form>
+        <a href="javascript:history.back()" class="back-link">Orqaga qaytish</a>
+    </div>
+</body>
+</html>

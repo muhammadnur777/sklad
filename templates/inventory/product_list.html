@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+{% load number_format %}
+{% block extra_css %}
+<style>
+    .filters {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .filters input[type="text"] {
+        padding: 8px 14px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        width: 250px;
+    }
+    .filters .cat-btn {
+        padding: 6px 16px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+        color: #333;
+    }
+    .filters .cat-btn.active {
+        background: #e94560;
+        color: #fff;
+        border-color: #e94560;
+    }
+    .products-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .products-table thead {
+        background: #1a1a2e;
+        color: #fff;
+    }
+    .products-table th {
+        padding: 14px 20px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .products-table td {
+        padding: 14px 20px;
+        font-size: 14px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .products-table tbody tr:hover {
+        background: #f8f8ff;
+    }
+    .products-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .products-table .price {
+        font-weight: 700;
+        color: #e94560;
+        font-size: 15px;
+    }
+    .products-table .category-badge {
+        background: #f0f0f5;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #555;
+    }
+    .stock-low {
+        color: #e94560;
+        font-weight: 600;
+    }
+    .show-more-wrap {
+        text-align: center;
+        margin-top: 16px;
+    }
+    .btn-show-more {
+        padding: 10px 30px;
+        background: #1a1a2e;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-show-more:hover { background: #16213e; }
+    .no-products {
+        text-align: center;
+        padding: 60px;
+        color: #999;
+        font-size: 18px;
+    }
+
+    /* Кнопка минус */
+    .btn-minus {
+        background: #e94560;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        margin-left: 8px;
+    }
+    .btn-minus:hover { background: #c73650; }
+
+    /* Модальное окно */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        width: 340px;
+        text-align: center;
+    }
+    .modal-box h3 { margin-bottom: 16px; color: #1a1a2e; }
+    .modal-box input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 18px;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    .modal-box input:focus { border-color: #e94560; outline: none; }
+    .modal-box .modal-info { color: #888; font-size: 13px; margin-bottom: 16px; }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .modal-btns .btn-ok { background: #e94560; color: #fff; }
+    .modal-btns .btn-cancel { background: #eee; color: #333; }
+
+    /* Корзина */
+    .cart-panel {
+        display: none;
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        border-left: 4px solid #e94560;
+    }
+    .cart-panel.active { display: block; }
+    .cart-panel h3 {
+        color: #1a1a2e;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+    }
+    .cart-table th {
+        text-align: left;
+        font-size: 12px;
+        color: #888;
+        padding: 6px 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .cart-table td {
+        padding: 8px 10px;
+        font-size: 14px;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .cart-table .cart-remove {
+        color: #e94560;
+        cursor: pointer;
+        font-size: 18px;
+        border: none;
+        background: none;
+    }
+    .cart-total {
+        text-align: right;
+        font-size: 18px;
+        font-weight: 700;
+        color: #e94560;
+        margin: 12px 0;
+    }
+    .cart-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .cart-actions input[type="date"] {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .btn-confirm {
+        padding: 10px 24px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-confirm:hover { background: #218838; }
+    .btn-clear {
+        padding: 10px 24px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+
+.modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #fff;
+        border-radius: 12px;
+        padding: 28px;
+        width: 580px;
+        max-width: 95vw;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .modal-box h3 {
+        margin-bottom: 4px;
+        color: #1a1a2e;
+        font-size: 18px;
+    }
+    .modal-subtitle {
+        color: #888;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+    .stats-highlight {
+        background: #f8f8ff;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+        text-align: center;
+    }
+    .stats-highlight .month-name {
+        font-size: 14px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+    .stats-highlight .big-number {
+        font-size: 28px;
+        font-weight: 700;
+        color: #e94560;
+    }
+    .stats-highlight .sub-info {
+        font-size: 13px;
+        color: #666;
+        margin-top: 4px;
+    }
+    .months-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .months-table th {
+        text-align: left;
+        font-size: 12px;
+        color: #888;
+        padding: 6px 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .months-table td {
+        padding: 8px;
+        font-size: 13px;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .months-table .current-month {
+        background: #fff5f5;
+        font-weight: 600;
+    }
+    .modal-close {
+        width: 100%;
+        padding: 10px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 12px;
+    }
+
+.shop-mini-card {
+        flex: 1;
+        min-width: 120px;
+        background: #f0fff0;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+    .shop-mini-card .shop-name {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+    .shop-mini-card .shop-qty {
+        font-size: 16px;
+        font-weight: 700;
+        color: #28a745;
+    }
+    .shop-mini-card .shop-boxes {
+        font-size: 11px;
+        color: #666;
+    }
+
+</style>
+
+<!-- Статистика товара -->
+<!-- Статистика товара -->
+<div class="modal-overlay" id="statsModal" onclick="if(event.target===this)closeStats()">
+    <div class="modal-box">
+        <h3 id="statsName">Tovar</h3>
+        <div class="modal-subtitle" id="statsSubtitle">Skladdagi qoldiq: 0</div>
+
+        <div class="stats-highlight">
+            <div style="font-size:11px; color:#aaa; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px;">Sotilgan</div>
+            <div class="month-name" id="statsMonth">Shu oy</div>
+            <div class="big-number" id="statsMonthQty">0 dona</div>
+            <div class="sub-info" id="statsMonthBoxes">0 korobka</div>
+            <div class="sub-info" id="statsMonthSum">0 so'm</div>
+        </div>
+
+        <div id="shopsMonthBlock" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;"></div>
+
+        <table class="months-table">
+            <thead>
+                <tr>
+                    <th>Oy</th>
+                    <th>Dona</th>
+                    <th>Korobka</th>
+                    <th>Summa</th>
+                    <th>Dokonlar</th>
+                </tr>
+            </thead>
+            <tbody id="statsMonthsBody"></tbody>
+        </table>
+
+        <button class="modal-close" onclick="closeStats()">Yopish</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block content %}
+
+<!-- Корзина -->
+<div class="cart-panel" id="cartPanel">
+    <h3>Bozorga ketish</h3>
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Tovar</th>
+                <th>Soni</th>
+                <th>1 dona</th>
+                <th>Summa</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="cartBody"></tbody>
+    </table>
+    <div class="cart-total">Jami: <span id="cartTotal">0</span> so'm</div>
+    <div class="cart-actions">
+        <input type="date" id="cartDate">
+        <button class="btn-confirm" onclick="confirmCart()">Tasdiqlash</button>
+        <button class="btn-clear" onclick="clearCart()">Tozalash</button>
+    </div>
+</div>
+
+<p style="color:#999; font-size:13px; margin-bottom:10px;">{{ products|length }} Tovarlar</p>
+
+<div class="filters">
+    <form method="get" style="display:flex; gap:10px; align-items:center;">
+        <input type="text" name="search" placeholder="Tovar qidirish..." value="{{ search }}">
+        <button type="submit" class="btn btn-primary">Qidirish</button>
+    </form>
+
+    <a href="/" class="cat-btn {% if not current_category and not low_stock %}active{% endif %}">Barchasi</a>
+    {% for cat in categories %}
+        <a href="?category={{ cat.id }}" class="cat-btn {% if current_category == cat.id|stringformat:'d' %}active{% endif %}">
+            {{ cat.name }}
+        </a>
+    {% endfor %}
+    <a href="?low=1" class="cat-btn {% if low_stock %}active{% endif %}" style="{% if low_stock %}background:#e94560; color:#fff; border-color:#e94560;{% else %}background:#fff5f5; color:#e94560; border-color:#e94560;{% endif %}">
+        Kam qolayotgan
+    </a>
+</div>
+
+{% if products %}
+<table class="products-table">
+    <thead>
+        <tr>
+            <th>Kategoriya</th>
+            <th>Tovar</th>
+            <th>Qoldiq</th>
+            <th>Korobka</th>
+            <th>1 dona</th>
+            <th>Summa</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr class="{% if forloop.counter > 6 %}extra-row{% endif %}" {% if forloop.counter > 6 %}style="display:none; cursor:pointer;"{% else %}style="cursor:pointer;"{% endif %} onclick="showProductStats({{ product.id }})">
+            <td><span class="category-badge">{{ product.category.name }}</span></td>
+            <td>{{ product.name }}</td>
+            <td class="{% if product.is_low_stock %}stock-low{% endif %}">
+                {{ product.stock|floatformat:0 }} {{ product.unit.short_name }}
+                {% if product.is_low_stock %} — Kam!{% endif %}
+            </td>
+            <td>{{ product.box_count }} kor.</td>
+            <td class="price">{{ product.sell_price|space_number }} so'm</td>
+            <td class="price">{{ product.total_value|space_number }} so'm</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if products|length > 6 %}
+<div class="show-more-wrap">
+    <button class="btn-show-more" id="showMoreBtn" onclick="toggleRows()">
+        Yana {{ products|length|add:"-6" }} ta tovar ko'rsatish ▼
+    </button>
+</div>
+{% endif %}
+
+{% else %}
+<div class="no-products">Tovar topilmadi</div>
+{% endif %}
+
+<!-- Модальное окно -->
+<div class="modal-overlay" id="minusModal">
+    <div class="modal-box">
+        <h3 id="modalTitle">Tovar</h3>
+        <div class="modal-info" id="modalInfo">Qoldiq: 0</div>
+        <input type="number" id="modalQty" min="1" placeholder="Nechta?">
+        <div class="modal-btns">
+            <button class="btn-ok" onclick="addToCart()">Qo'shish</button>
+            <button class="btn-cancel" onclick="closeModal()">Bekor</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var cart = JSON.parse(localStorage.getItem('bozorCart') || '[]');
+var currentProduct = null;
+
+function formatNum(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+// Сегодняшняя дата
+var today = new Date().toISOString().split('T')[0];
+document.getElementById('cartDate').value = today;
+
+function openMinus(id, name, stock, price) {
+    currentProduct = {id: id, name: name, stock: stock, price: price};
+    document.getElementById('modalTitle').textContent = name;
+    document.getElementById('modalInfo').textContent = 'Qoldiq: ' + stock + ' dona';
+    document.getElementById('modalQty').value = '';
+    document.getElementById('modalQty').max = stock;
+    document.getElementById('minusModal').classList.add('active');
+    document.getElementById('modalQty').focus();
+}
+
+function closeModal() {
+    document.getElementById('minusModal').classList.remove('active');
+    currentProduct = null;
+}
+
+function addToCart() {
+    var qty = parseInt(document.getElementById('modalQty').value);
+    if (!qty || qty <= 0) return alert('Sonini kiriting!');
+    if (qty > currentProduct.stock) return alert('Qoldiqdan ko\'p!');
+
+    var existing = cart.find(function(item) { return item.id === currentProduct.id; });
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        cart.push({
+            id: currentProduct.id,
+            name: currentProduct.name,
+            qty: qty,
+            price: currentProduct.price
+        });
+    }
+
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+    closeModal();
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function clearCart() {
+    cart = [];
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function renderCart() {
+    var panel = document.getElementById('cartPanel');
+    var body = document.getElementById('cartBody');
+    var totalEl = document.getElementById('cartTotal');
+
+    if (cart.length === 0) {
+        panel.classList.remove('active');
+        return;
+    }
+
+    panel.classList.add('active');
+    var html = '';
+    var total = 0;
+
+    cart.forEach(function(item, i) {
+        var sum = item.qty * item.price;
+        total += sum;
+        html += '<tr>';
+        html += '<td>' + item.name + '</td>';
+        html += '<td>' + item.qty + '</td>';
+        html += '<td>' + item.price + ' so\'m</td>';
+        html += '<td><strong>' + sum + ' so\'m</strong></td>';
+        html += '<td><button class="cart-remove" onclick="removeFromCart(' + i + ')">✕</button></td>';
+        html += '</tr>';
+    });
+
+    body.innerHTML = html;
+    totalEl.textContent = total.toLocaleString();
+}
+
+function confirmCart() {
+    if (cart.length === 0) return;
+    var date = document.getElementById('cartDate').value;
+    if (!date) return alert('Sanani kiriting!');
+
+    var data = {
+        items: cart,
+        date: date
+    };
+
+    fetch('/api/bozor-send/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.ok) {
+            cart = [];
+            localStorage.setItem('bozorCart', JSON.stringify(cart));
+            location.reload();
+        } else {
+            alert(resp.error || 'Xatolik!');
+        }
+    })
+    .catch(function() { alert('Server xatoligi!'); });
+}
+
+function getCookie(name) {
+    var value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return value ? value.pop() : '';
+}
+
+// Показать корзину при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    renderCart();
+});
+
+// Показать ещё / Yopish
+function toggleRows() {
+    var rows = document.querySelectorAll('.extra-row');
+    var btn = document.getElementById('showMoreBtn');
+    var isOpen = localStorage.getItem('rowsOpen') === 'true';
+
+    if (!isOpen) {
+        rows.forEach(function(row) { row.style.display = 'table-row'; });
+        btn.textContent = 'Yopish ▲';
+        localStorage.setItem('rowsOpen', 'true');
+    } else {
+        rows.forEach(function(row) { row.style.display = 'none'; });
+        btn.textContent = 'Yana {{ products|length|add:"-6" }} ta tovar ko\'rsatish ▼';
+        localStorage.setItem('rowsOpen', 'false');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('rowsOpen') === 'true') {
+        var rows = document.querySelectorAll('.extra-row');
+        var btn = document.getElementById('showMoreBtn');
+        if (btn) {
+            rows.forEach(function(row) { row.style.display = 'table-row'; });
+            btn.textContent = 'Yopish ▲';
+        }
+    }
+});
+
+// Автообновление
+var currentCount = {{ products|length }};
+setInterval(function() {
+    fetch('/?check=1')
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var match = html.match(/(\d+) Tovarlar/);
+            if (match) {
+                var newCount = parseInt(match[1]);
+                if (newCount !== currentCount) {
+                    location.reload();
+                }
+            }
+        });
+}, 10000);
+
+
+// Восстанавливаем модалку после обновления
+document.addEventListener('DOMContentLoaded', function() {
+    var openProduct = localStorage.getItem('openStatsProduct');
+    if (openProduct) {
+        showProductStats(parseInt(openProduct));
+    }
+});
+
+
+function showProductStats(productId) {
+    localStorage.setItem('openStatsProduct', productId);
+    fetch('/api/product-stats/' + productId + '/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('statsName').textContent = data.name;
+            document.getElementById('statsSubtitle').textContent =
+                'Skladdagi qoldiq: ' + data.stock + ' dona (' + data.stock_boxes + ' korobka)';
+
+            document.getElementById('statsMonth').textContent = data.current_month;
+            document.getElementById('statsMonthQty').textContent = formatNum(data.month_qty) + ' dona';
+            document.getElementById('statsMonthBoxes').textContent = data.month_boxes + ' korobka';
+            document.getElementById('statsMonthSum').textContent = formatNum(data.month_sum) + ' so\'m';
+
+            // Магазины за этот месяц
+            var shopsHtml = '';
+            data.shops_month.forEach(function(s) {
+                shopsHtml += '<div class="shop-mini-card">';
+                shopsHtml += '<div class="shop-name">' + s.name + '</div>';
+                shopsHtml += '<div class="shop-qty">' + formatNum(s.qty) + ' dona</div>';
+                shopsHtml += '<div class="shop-boxes">' + s.boxes + ' kor. | ' + formatNum(s.total) + ' so\'m</div>';
+                shopsHtml += '</div>';
+            });
+            document.getElementById('shopsMonthBlock').innerHTML = shopsHtml;
+
+            // Таблица месяцев
+            var html = '';
+            data.months.forEach(function(m, i) {
+                var cls = m.is_current ? ' class="current-month"' : '';
+                var shopsInfo = '';
+                m.shops.forEach(function(s) {
+                    shopsInfo += s.name + ': ' + s.qty + ' ';
+                });
+                html += '<tr' + cls + '>';
+                html += '<td>' + m.month + ' ' + m.year + '</td>';
+                html += '<td>' + formatNum(m.qty) + '</td>';
+                html += '<td>' + m.boxes + '</td>';
+                html += '<td>' + formatNum(m.total) + ' so\'m</td>';
+                html += '<td style="font-size:11px; color:#888;">' + shopsInfo + '</td>';
+                html += '</tr>';
+            });
+            document.getElementById('statsMonthsBody').innerHTML = html;
+
+            document.getElementById('statsModal').classList.add('active');
+        });
+}
+
+function closeStats() {
+    document.getElementById('statsModal').classList.remove('active');
+    localStorage.removeItem('openStatsProduct');
+}
+
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+

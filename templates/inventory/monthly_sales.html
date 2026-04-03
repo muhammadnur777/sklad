@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load number_format %}
+
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: 22px;
+        color: #1a1a2e;
+        margin-bottom: 20px;
+    }
+    .back-link {
+        color: #0d6efd;
+        text-decoration: none;
+        font-size: 14px;
+        margin-bottom: 16px;
+        display: inline-block;
+    }
+    .months-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .month-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .month-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .month-card.current {
+        border-left: 4px solid #28a745;
+    }
+    .month-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .month-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    .month-total {
+        font-size: 20px;
+        font-weight: 700;
+        color: #28a745;
+    }
+    .month-shops {
+        display: none;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #f0f0f0;
+    }
+    .month-shops.active { display: block; }
+    .shop-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .shop-row:last-child { border-bottom: none; }
+    .shop-name {
+        font-size: 14px;
+        color: #555;
+    }
+    .shop-total {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    .month-zero {
+        color: #ccc;
+    }
+    .month-zero .month-total {
+        color: #ccc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/dashboard/" class="back-link">← Dashboard</a>
+<h2 class="page-title">Oylik sotuvlar</h2>
+
+<div class="months-grid">
+    {% for month in months_data %}
+    <div class="month-card {% if month.is_current %}current{% endif %} {% if month.total == 0 %}month-zero{% endif %}" onclick="toggleShops(this)">
+        <div class="month-header">
+            <span class="month-name">
+                {{ month.month }} {{ month.year }}
+                {% if month.is_current %}<span style="font-size:11px; color:#28a745; margin-left:6px;">shu oy</span>{% endif %}
+            </span>
+            <span class="month-total">{{ month.total|space_number }} so'm</span>
+        </div>
+        <div class="month-shops">
+            {% for shop in month.shops %}
+            <div class="shop-row">
+                <span class="shop-name">{{ shop.name }}</span>
+                <span class="shop-total">{{ shop.total|space_number }} so'm</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleShops(card) {
+    var shops = card.querySelector('.month-shops');
+    shops.classList.toggle('active');
+}
+</script>
+{% endblock %}

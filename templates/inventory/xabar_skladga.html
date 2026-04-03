@@ -1,0 +1,126 @@
+{% extends base_template %}
+{% block extra_css %}
+<style>
+    .chat-wrap {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .chat-messages {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 16px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .chat-msg {
+        padding: 10px 14px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        max-width: 80%;
+        font-size: 14px;
+    }
+    .chat-msg .msg-text { margin-bottom: 4px; }
+    .chat-msg .msg-meta { font-size: 11px; color: #999; }
+    .msg-from-bozor {
+        background: #e8f5e9;
+        margin-right: auto;
+        border-bottom-left-radius: 4px;
+    }
+    .msg-from-sklad {
+        background: #fce4ec;
+        margin-left: auto;
+        border-bottom-right-radius: 4px;
+    }
+    .chat-form {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        display: flex;
+        gap: 10px;
+    }
+    .chat-form textarea {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        resize: none;
+        min-height: 50px;
+        font-family: inherit;
+    }
+    .chat-form textarea:focus { border-color: #28a745; outline: none; }
+    .chat-form button {
+        padding: 10px 20px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+        align-self: flex-end;
+    }
+    .chat-form button:hover { background: #218838; }
+    .no-messages {
+        text-align: center;
+        color: #ccc;
+        padding: 30px;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-wrap">
+    <h2 style="margin-bottom:16px; color:#1a1a2e;">Xabarlar</h2>
+
+    <div class="chat-messages" id="chatMessages">
+        {% if messages_list %}
+            {% for msg in messages_list %}
+            <div class="chat-msg {% if msg.direction == 'to_sklad' %}msg-from-bozor{% else %}msg-from-sklad{% endif %}">
+                <div class="msg-text">{{ msg.text }}</div>
+                <div class="msg-meta">
+                    {% if msg.direction == 'to_sklad' %}Bozor{% else %}Sklad{% endif %}
+                    — {{ msg.created_at|date:"d.m.Y H:i" }}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-messages">Xabarlar yo'q</div>
+        {% endif %}
+    </div>
+
+    <div class="chat-form">
+        <form method="post" style="display:flex; gap:10px; width:100%;">
+            {% csrf_token %}
+            <textarea name="text" placeholder="Xabar yozing..." required></textarea>
+            <button type="submit">Yuborish</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var chatDiv = document.getElementById('chatMessages');
+chatDiv.scrollTop = chatDiv.scrollHeight;
+
+setInterval(function() {
+    fetch(window.location.href)
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newChat = doc.getElementById('chatMessages');
+            var oldChat = document.getElementById('chatMessages');
+            if (newChat && oldChat && newChat.innerHTML !== oldChat.innerHTML) {
+                oldChat.innerHTML = newChat.innerHTML;
+                oldChat.scrollTop = oldChat.scrollHeight;
+            }
+        });
+}, 16000);
+</script>
+{% endblock %}

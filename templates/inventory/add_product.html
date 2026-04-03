@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 600px;
+        margin: 20px auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .form-card h2 {
+        margin-bottom: 20px;
+        color: #1a1a2e;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #e94560;
+        outline: none;
+    }
+    .form-row {
+        display: flex;
+        gap: 12px;
+    }
+    .form-row .form-group {
+        flex: 1;
+    }
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn-save {
+        padding: 10px 30px;
+        background: #e94560;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .btn-save:hover { background: #c73650; }
+    .btn-cancel {
+        padding: 10px 30px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <h2>Yangi tovar qo'shish</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Tovar nomi</label>
+            <input type="text" name="name" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Kategoriya</label>
+                <select name="category" required>
+                    <option value="">Tanlang...</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>O'lchov birligi</label>
+                <select name="unit" required>
+                    <option value="">Tanlang...</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}">{{ unit.name }} ({{ unit.short_name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Sotish narxi (so'm) (bittasini)</label>
+            <input type="number" name="sell_price" id="sellPriceInput" required oninput="formatField(this)">
+            <div style="color:#888; font-size:13px; margin-top:4px;" id="sellPriceDisplay"></div>
+        </div>
+     <div class="form-row">
+            <div class="form-group">
+                <label>Boshlang'ich qoldiq(korobka)</label>
+                <input type="number" name="stock" required>
+            </div>
+            <div class="form-group">
+                <label>Minimal qoldiq (korobka)</label>
+                <input type="number" name="min_stock_box" value="">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>1 korobkada nechta</label>
+            <input type="number" name="per_box" value="1">
+        </div>
+        <div class="form-group">
+            <label>Sana</label>
+            <input type="date" name="date" value="{{ today }}" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-save">Saqlash</button>
+            <a href="/" class="btn-cancel">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+function formatField(input) {
+    var display = input.parentNode.querySelector('[id$="Display"]');
+    if (display && input.value) {
+        var num = parseInt(input.value);
+        display.textContent = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm";
+    } else if (display) {
+        display.textContent = '';
+    }
+}
+</script>
+
+{% endblock %}
+{% endblock %}

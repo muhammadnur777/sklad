@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load number_format %}
+{% block extra_css %}
+<style>
+    .bozor-wrap {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .bozor-products {
+        flex: 1;
+    }
+    .bozor-cart {
+        width: 380px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        border-left: 4px solid #e94560;
+        position: sticky;
+        top: 80px;
+    }
+    .bozor-cart h3 {
+        color: #1a1a2e;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+
+    .search-box {
+        margin-bottom: 16px;
+    }
+    .search-box input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .search-box input:focus { border-color: #e94560; outline: none; }
+
+    .product-list-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .product-list-table thead {
+        background: #1a1a2e;
+        color: #fff;
+    }
+    .product-list-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+    .product-list-table td {
+        padding: 10px 16px;
+        font-size: 14px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .product-list-table tbody tr:hover { background: #f8f8ff; }
+
+    .btn-minus {
+        background: #e94560;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-minus:hover { background: #c73650; }
+
+    /* Модальное окно */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        width: 340px;
+        text-align: center;
+    }
+    .modal-box h3 { margin-bottom: 16px; color: #1a1a2e; }
+    .modal-box input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 18px;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    .modal-box input:focus { border-color: #e94560; outline: none; }
+    .modal-box .modal-info { color: #888; font-size: 13px; margin-bottom: 16px; }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .modal-btns .btn-ok { background: #e94560; color: #fff; }
+    .modal-btns .btn-cancel { background: #eee; color: #333; }
+
+    /* Корзина */
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+    }
+    .cart-table th {
+        text-align: left;
+        font-size: 11px;
+        color: #888;
+        padding: 4px 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .cart-table td {
+        padding: 6px 8px;
+        font-size: 13px;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .cart-remove {
+        color: #e94560;
+        cursor: pointer;
+        font-size: 16px;
+        border: none;
+        background: none;
+    }
+    .cart-total {
+        text-align: right;
+        font-size: 18px;
+        font-weight: 700;
+        color: #e94560;
+        margin: 12px 0;
+    }
+    .cart-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .cart-actions input[type="date"] {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        width: 100%;
+    }
+    .btn-confirm {
+        padding: 12px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+    }
+    .btn-confirm:hover { background: #218838; }
+    .btn-clear {
+        padding: 10px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        width: 100%;
+    }
+    .cart-empty {
+        text-align: center;
+        color: #ccc;
+        font-size: 14px;
+        padding: 30px 0;
+    }
+
+    @media (max-width: 768px) {
+        .bozor-wrap { flex-direction: column; }
+        .bozor-cart { width: 100%; position: static; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bozor-wrap">
+    <!-- Товары слева -->
+    <div class="bozor-products">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Tovar qidirish..." oninput="filterProducts()">
+        </div>
+        <table class="product-list-table">
+            <thead>
+                <tr>
+                    <th>Tovar</th>
+                    <th>Qoldiq</th>
+                    <th>Narx</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="productTableBody">
+                {% for product in products %}
+                <tr data-name="{{ product.name|lower }}">
+                    <td>
+                        <strong>{{ product.name }}</strong>
+                        <br><span style="font-size:12px; color:#888;">{{ product.category.name }}</span>
+                    </td>
+                    <td>{{ product.stock }} {{ product.unit.short_name }}</td>
+                    <td style="font-weight:700; color:#e94560;">{{ product.sell_price|space_number }} so'm</td>
+                    <td>
+                        <button class="btn-minus" onclick="openMinus({{ product.id }}, '{{ product.name }}', {{ product.stock }}, {{ product.sell_price }})">−</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Корзина справа -->
+    <div class="bozor-cart">
+        <h3>Bozorga ketish</h3>
+        <div id="cartContent">
+            <div class="cart-empty" id="cartEmpty">Tovar tanlanmagan</div>
+            <table class="cart-table" id="cartTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Tovar</th>
+                        <th>Soni</th>
+                        <th>Summa</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+        </div>
+        <div class="cart-total">Jami: <span id="cartTotal">0</span> so'm</div>
+        <div class="cart-actions">
+            <select id="cartShop" required>
+                <option value="">Dokonni tanlang...</option>
+                {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" id="cartDate">
+            <button class="btn-confirm" onclick="confirmCart()">Tasdiqlash</button>
+            <button class="btn-clear" onclick="clearCart()">Tozalash</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно -->
+<div class="modal-overlay" id="minusModal">
+    <div class="modal-box">
+        <h3 id="modalTitle">Tovar</h3>
+        <div class="modal-info" id="modalInfo">Qoldiq: 0</div>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#888;">Korobka</label>
+            <input type="number" id="modalBox" min="1" placeholder="Korobka soni" oninput="calcModalDona()">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#888;">1 korobkada nechta</label>
+            <input type="number" id="modalPerBox" min="1" oninput="calcModalDona()">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#888;">Dona (o'zgartirsa bo'ladi)</label>
+            <input type="number" id="modalQty" min="1" placeholder="Dona">
+        </div>
+        <div id="modalCalcInfo" style="color:#888; font-size:12px; margin-bottom:12px;"></div>
+        <div class="modal-btns">
+            <button class="btn-ok" onclick="addToCart()">Qo'shish</button>
+            <button class="btn-cancel" onclick="closeModal()">Bekor</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var cart = JSON.parse(localStorage.getItem('bozorCart') || '[]');
+var currentProduct = null;
+
+var perBoxData = {};
+{% for product in products %}
+perBoxData[{{ product.id }}] = {{ product.per_box }};
+{% endfor %}
+
+function calcModalDona() {
+    var boxQty = parseInt(document.getElementById('modalBox').value) || 0;
+    var perBox = parseInt(document.getElementById('modalPerBox').value) || 0;
+    var dona = boxQty * perBox;
+    document.getElementById('modalQty').value = dona;
+    document.getElementById('modalCalcInfo').textContent = boxQty + ' korobka × ' + perBox + ' = ' + dona + ' dona';
+}
+
+function formatNum(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+var today = new Date().toISOString().split('T')[0];
+document.getElementById('cartDate').value = today;
+
+function filterProducts() {
+    var query = document.getElementById('searchInput').value.toLowerCase();
+    var rows = document.querySelectorAll('#productTableBody tr');
+    rows.forEach(function(row) {
+        var name = row.getAttribute('data-name');
+        row.style.display = name.includes(query) ? '' : 'none';
+    });
+}
+
+function openMinus(id, name, stock, price) {
+    currentProduct = {id: id, name: name, stock: stock, price: price};
+    var perBox = perBoxData[id] || 1;
+    var boxes = Math.floor(stock / perBox);
+    document.getElementById('modalTitle').textContent = name;
+    document.getElementById('modalInfo').textContent = 'Qoldiq: ' + stock + ' dona (' + boxes + ' korobka)';
+    document.getElementById('modalBox').value = '';
+    document.getElementById('modalPerBox').value = perBox;
+    document.getElementById('modalQty').value = '';
+    document.getElementById('modalCalcInfo').textContent = '';
+    document.getElementById('minusModal').classList.add('active');
+    document.getElementById('modalBox').focus();
+}
+function closeModal() {
+    document.getElementById('minusModal').classList.remove('active');
+    currentProduct = null;
+}
+
+function addToCart() {
+    var qty = parseInt(document.getElementById('modalQty').value);
+    if (!qty || qty <= 0) return alert('Sonini kiriting!');
+    if (qty > currentProduct.stock) return alert('Qoldiqdan ko\'p!');
+
+    var existing = cart.find(function(item) { return item.id === currentProduct.id; });
+    if (existing) {
+        existing.qty += qty;
+    } else {
+        cart.push({
+            id: currentProduct.id,
+            name: currentProduct.name,
+            qty: qty,
+            price: currentProduct.price
+        });
+    }
+
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+    closeModal();
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function clearCart() {
+    cart = [];
+    localStorage.setItem('bozorCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function renderCart() {
+    var body = document.getElementById('cartBody');
+    var totalEl = document.getElementById('cartTotal');
+    var table = document.getElementById('cartTable');
+    var empty = document.getElementById('cartEmpty');
+
+    if (cart.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        totalEl.textContent = '0';
+        return;
+    }
+
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    var html = '';
+    var total = 0;
+
+    cart.forEach(function(item, i) {
+        var sum = item.qty * item.price;
+        total += sum;
+        html += '<tr>';
+        var perBox = perBoxData[item.id] || 1;
+        var boxes = Math.floor(item.qty / perBox);
+        html += '<td>' + item.name + '</td>';
+        html += '<td>' + boxes + ' kor. (' + item.qty + ' dona)</td>';
+        html += '<td>' + formatNum(sum) + ' so\'m</td>';
+        html += '<td><button class="cart-remove" onclick="removeFromCart(' + i + ')">✕</button></td>';
+        html += '</tr>';
+    });
+
+    body.innerHTML = html;
+    totalEl.textContent = formatNum(total);
+}
+
+function confirmCart() {
+    if (cart.length === 0) return alert('Tovar tanlanmagan!');
+    var date = document.getElementById('cartDate').value;
+    if (!date) return alert('Sanani kiriting!');
+    var shopId = document.getElementById('cartShop').value;
+    if (!shopId) return alert('Dokonni tanlang!');
+
+    fetch('/api/bozor-send/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ items: cart, date: date, shop_id: shopId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.ok) {
+            window.open('/api/download-excel/' + resp.sale_id + '/', '_blank');
+            cart = [];
+            localStorage.setItem('bozorCart', JSON.stringify(cart));
+            setTimeout(function() { location.reload(); }, 500);
+        } else {
+            alert(resp.error || 'Xatolik!');
+        }
+    })
+    .catch(function() { alert('Server xatoligi!'); });
+}
+
+function getCookie(name) {
+    var value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return value ? value.pop() : '';
+}
+
+document.addEventListener('DOMContentLoaded', renderCart);
+</script>
+{% endblock %}

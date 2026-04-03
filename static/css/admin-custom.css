@@ -1,0 +1,17 @@
+/* Кнопки справа — на мобилке вниз */
+@media (max-width: 768px) {
+    .submit-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        margin-top: 16px;
+    }
+    .submit-row .btn,
+    .submit-row input[type="submit"] {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+}

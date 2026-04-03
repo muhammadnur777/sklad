@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKLAD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .navbar {
+            background: #1a1a2e;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 {
+            color: #e94560;
+            font-size: 24px;
+        }
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+        }
+        .navbar a:hover { color: #e94560; }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:hover { background: #c73650; }
+
+        .badge-notif {
+            background: #e94560;
+            color: #fff;
+            border-radius: 50%;
+            padding: 2px 7px;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/"><h1>SKLAD</h1></a>
+      <div>
+            <a href="/dashboard/">Dashboard</a>
+            <a href="/">Tovarlar</a>
+            <a href="/bozorga-ketish/">Bozorga ketish</a>
+            <a href="/bozorga-ketuvlar/">Ketuvlar</a>
+            <a href="/tovar/qoshish/">+ Yangi tovar</a>
+            <a href="/tovar/toldirish/">To'ldirish</a>
+            <a href="/xabar/bozorga/">Xabarlar <span id="skladNotif" class="badge-notif" style="display:none;"></span></a>
+            {% if user.is_authenticated %}
+                <a href="/admin/">Admin</a>
+                <a href="{% url 'logout' %}">Chiqish</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+
+
+    
+   
+    <script>
+    function checkMessages() {
+        fetch('/api/xabar-count/?direction=to_sklad')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var badge = document.getElementById('skladNotif');
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            });
+    }
+    checkMessages();
+    setInterval(checkMessages, 19000);
+    </script>
+</body>
+</html>

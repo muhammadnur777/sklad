@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 600px;
+        margin: 20px auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .form-card h2 {
+        margin-bottom: 20px;
+        color: #1a1a2e;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #e94560;
+        outline: none;
+    }
+    .form-row {
+        display: flex;
+        gap: 12px;
+    }
+    .form-row .form-group {
+        flex: 1;
+    }
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn-save {
+        padding: 10px 30px;
+        background: #e94560;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .btn-save:hover { background: #c73650; }
+    .btn-cancel {
+        padding: 10px 30px;
+        background: #eee;
+        color: #333;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .product-info {
+        background: #f8f8ff;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 13px;
+        color: #666;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <h2>Tovarni to'ldirish</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Tovarni tanlang</label>
+            <select name="product" id="productSelect" required>
+                <option value="">Qidirish...</option>
+                {% for product in products %}
+                <option value="{{ product.id }}"
+                    data-stock="{{ product.stock }}"
+                    data-sell="{{ product.sell_price }}"
+                    data-unit="{{ product.unit.short_name }}">
+                    {{ product.name }} ({{ product.stock }} {{ product.unit.short_name }})
+                </option>
+                {% endfor %}
+            </select>
+            <div class="product-info" id="productInfo"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Korobka soni</label>
+                <input type="number" id="boxQty" oninput="calcDona()" required>
+            </div>
+            <div class="form-group">
+                <label>1 korobkada nechta</label>
+                <input type="number" id="perBoxQty" oninput="calcDona()">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Dona (avto, o'zgartirsa bo'ladi)</label>
+            <input type="number" name="quantity" id="donaQty" required>
+        </div>
+        <div id="calcInfo" style="color:#888; font-size:13px; margin-bottom:12px;"></div>
+        <!-- <div class="form-row">
+            <div class="form-group">
+                <label>Korobka soni</label>
+                <input type="number" id="boxQty" oninput="calcDona()" required>
+            </div>
+            <div class="form-group">
+                <label>Dona (avto)</label>
+                <input type="number" name="quantity" id="donaQty" required>
+            </div>
+        </div>
+        <div id="calcInfo" style="color:#888; font-size:13px; margin-bottom:12px;"></div> -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Sotish narxi (so'm) (bittasini)</label>
+                <input type="number" name="sell_price" id="sellPrice" oninput="formatRefill(this)">
+                <div style="color:#888; font-size:13px; margin-top:4px;" id="sellPriceRefillDisplay"></div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Sana</label>
+            <input type="date" name="date" value="{{ today }}" required>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-save">Saqlash</button>
+            <a href="/" class="btn-cancel">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Поиск по товарам
+var selectEl = document.getElementById('productSelect');
+var options = Array.from(selectEl.options);
+
+var searchWrap = document.createElement('div');
+searchWrap.style.cssText = 'position:relative; margin-bottom:8px;';
+
+var searchInput = document.createElement('input');
+searchInput.type = 'text';
+searchInput.placeholder = 'Tovar nomini yozing...';
+searchInput.style.cssText = 'width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px;';
+
+selectEl.parentNode.insertBefore(searchWrap, selectEl);
+searchWrap.appendChild(searchInput);
+
+searchInput.addEventListener('input', function() {
+    var query = this.value.toLowerCase();
+    selectEl.innerHTML = '';
+
+    options.forEach(function(opt) {
+        if (!opt.value || opt.textContent.toLowerCase().includes(query)) {
+            selectEl.appendChild(opt.cloneNode(true));
+        }
+    });
+});
+
+// Показ информации о товаре
+selectEl.addEventListener('change', function() {
+    var option = this.options[this.selectedIndex];
+    var info = document.getElementById('productInfo');
+    var sellInput = document.getElementById('sellPrice');
+
+    if (this.value) {
+        var stock = option.getAttribute('data-stock');
+        var sell = option.getAttribute('data-sell');
+        var unit = option.getAttribute('data-unit');
+        info.style.display = 'block';
+        info.textContent = 'Hozirgi qoldiq: ' + stock + ' ' + unit + ' | Sotish narxi: ' + sell + ' so\'m';
+        sellInput.value = sell;
+    } else {
+        info.style.display = 'none';
+    }
+});
+
+function formatRefill(input) {
+    var display = document.getElementById('sellPriceRefillDisplay');
+    if (input.value) {
+        var num = parseInt(input.value);
+        display.textContent = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm";
+    } else {
+        display.textContent = '';
+    }
+}
+
+var perBoxData = {};
+{% for product in products %}
+perBoxData[{{ product.id }}] = {{ product.per_box }};
+{% endfor %}
+
+function calcDona() {
+    var boxQty = parseInt(document.getElementById('boxQty').value) || 0;
+    var perBox = parseInt(document.getElementById('perBoxQty').value) || 0;
+    var dona = boxQty * perBox;
+    document.getElementById('donaQty').value = dona;
+    document.getElementById('calcInfo').textContent = boxQty + ' korobka × ' + perBox + ' = ' + dona + ' dona';
+}
+
+document.getElementById('productSelect').addEventListener('change', function() {
+    var productId = this.value;
+    if (productId && perBoxData[productId]) {
+        document.getElementById('perBoxQty').value = perBoxData[productId];
+    }
+    calcDona();
+});
+
+// var perBoxData = {};
+// {% for product in products %}
+// perBoxData[{{ product.id }}] = {{ product.per_box }};
+// {% endfor %}
+
+// function calcDona() {
+//     var select = document.getElementById('productSelect');
+//     var productId = select.value;
+//     var boxQty = parseInt(document.getElementById('boxQty').value) || 0;
+//     var donaInput = document.getElementById('donaQty');
+//     var info = document.getElementById('calcInfo');
+
+//     if (productId && perBoxData[productId]) {
+//         var perBox = perBoxData[productId];
+//         var dona = boxQty * perBox;
+//         donaInput.value = dona;
+//         info.textContent = boxQty + ' korobka × ' + perBox + ' = ' + dona + ' dona';
+//     }
+// }
+
+// document.getElementById('productSelect').addEventListener('change', function() {
+//     calcDona();
+// });
+
+</script>
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends 'base_bozor.html' %}
+{% load number_format %}
+
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: 20px;
+        color: #1a1a2e;
+        margin-bottom: 16px;
+    }
+    .stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        flex: 1;
+        min-width: 160px;
+    }
+    .stat-card .stat-label {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+    .stat-card .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+    }
+    .stat-card.total .stat-value { color: #1a1a2e; }
+    .stat-card.paid .stat-value { color: #28a745; }
+    .stat-card.debt .stat-value { color: #e94560; }
+    .stat-card.filtered .stat-value { color: #0d6efd; }
+
+    .filter-box {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 20px;
+    }
+    .filter-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .filter-row input, .filter-row select {
+        padding: 8px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .filter-row input[type="text"] {
+        width: 200px;
+    }
+    .filter-row button {
+        padding: 8px 20px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .filter-row button:hover { background: #218838; }
+    .filter-row a {
+        padding: 8px 16px;
+        color: #888;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .sale-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .sale-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .sale-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .sale-date { font-size: 13px; color: #888; }
+    .sale-client { font-weight: 600; color: #1a1a2e; }
+    .sale-status {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-paid { background: #e8f5e9; color: #28a745; }
+    .status-debt { background: #fce4ec; color: #e94560; }
+    .sale-items {
+        display: none;
+        margin-top: 12px;
+        border-top: 1px solid #f0f0f0;
+        padding-top: 12px;
+    }
+    .sale-items.active { display: block; }
+    .sale-items table { width: 100%; border-collapse: collapse; }
+    .sale-items th {
+        text-align: left; font-size: 12px; color: #888;
+        padding: 4px 8px; border-bottom: 1px solid #eee;
+    }
+    .sale-items td {
+        padding: 6px 8px; font-size: 13px;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .item-total { font-weight: 700; color: #28a745; }
+    .highlight-product { background: #fff3cd; }
+    .no-sales {
+        text-align: center; padding: 60px; color: #999; font-size: 18px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Sotuvlar tarixi</h2>
+
+<div class="stats-row">
+    <div class="stat-card total">
+        <div class="stat-label">Bugun umumiy</div>
+        <div class="stat-value">{{ today_sales|space_number }} so'm</div>
+    </div>
+    <div class="stat-card paid">
+        <div class="stat-label">Bugun to'langan</div>
+        <div class="stat-value">{{ today_paid|space_number }} so'm</div>
+    </div>
+    <div class="stat-card debt">
+        <div class="stat-label">Bugun qarz</div>
+        <div class="stat-value">{{ today_debts|space_number }} so'm</div>
+    </div>
+    {% if date_from or date_to or product_search or status_filter %}
+    <div class="stat-card filtered">
+        <div class="stat-label">Filtr natijasi</div>
+        <div class="stat-value">{{ filtered_total|space_number }} so'm</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="filter-box">
+    <form method="get" class="filter-row">
+        <input type="date" name="date_from" value="{{ date_from }}" title="Dan">
+        <input type="date" name="date_to" value="{{ date_to }}" title="Gacha">
+        <input type="text" name="product" value="{{ product_search }}" placeholder="Tovar nomi...">
+        <select name="status">
+            <option value="">Barchasi</option>
+            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>To'langan</option>
+            <option value="debt" {% if status_filter == 'debt' %}selected{% endif %}>Qarz</option>
+        </select>
+        <button type="submit">Filtrlash</button>
+        <a href="/bozor/{{ shop.id }}/sotuvlar/">Tozalash</a>
+    </form>
+</div>
+
+{% if sales %}
+    {% for sale in sales %}
+    <div class="sale-card" onclick="toggleItems(this)">
+        <div class="sale-header">
+            <div>
+                <span class="sale-date">{{ sale.sale_date }}</span>
+                {% if sale.client_name %}
+                    <span class="sale-client"> — {{ sale.client_name }}</span>
+                {% endif %}
+                {% if sale.client_phone %}
+                    <span style="font-size:12px; color:#888;"> ({{ sale.client_phone }})</span>
+                {% endif %}
+            </div>
+            <span class="sale-status {% if sale.payment_status == 'paid' %}status-paid{% else %}status-debt{% endif %}">
+                {% if sale.payment_status == 'paid' %}To'langan{% else %}Qarz{% endif %}
+            </span>
+        </div>
+        <div class="sale-items">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tovar</th>
+                        <th>Soni</th>
+                        <th>Narxi</th>
+                        <th>Summa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sale.items.all %}
+                    <tr {% if product_search and product_search|lower in item.product.name|lower %}class="highlight-product"{% endif %}>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.price|space_number }} so'm</td>
+                        <td class="item-total">{{ item.total|space_number }} so'm</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="no-sales">Sotuvlar yo'q</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleItems(card) {
+    var items = card.querySelector('.sale-items');
+    items.classList.toggle('active');
+}
+</script>
+{% endblock %}
