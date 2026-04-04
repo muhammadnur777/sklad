@@ -54,13 +54,95 @@
             font-size: 11px;
             margin-left: 4px;
         }
+
+        /* ===== BURGER ===== */
+        .burger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 4px;
+            background: none;
+            border: none;
+        }
+        .burger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: all 0.25s;
+        }
+        /* анимация × при открытии */
+        .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .burger.open span:nth-child(2) { opacity: 0; }
+        .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+        }
+        .nav-links a:hover { color: #e94560; }
+
+        /* ===== RESPONSIVE ===== */
+
+        /* Широкий экран (≥ 1400px) */
+        @media (min-width: 1400px) {
+            .container { max-width: 1600px; }
+            .navbar { padding: 15px 60px; }
+            .navbar h1 { font-size: 28px; }
+            .nav-links a { font-size: 15px; margin-left: 24px; }
+        }
+
+        /* Мобильный (≤ 768px) */
+        @media (max-width: 768px) {
+            .navbar {
+                flex-wrap: wrap;
+                padding: 12px 16px;
+                position: relative;
+            }
+            .navbar h1 { font-size: 20px; }
+            .burger { display: flex; }
+
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                background: #16213e;
+                border-radius: 8px;
+                margin-top: 8px;
+                padding: 10px 0;
+                gap: 0;
+            }
+            .nav-links.open { display: flex; }
+            .nav-links a {
+                margin-left: 0;
+                padding: 10px 18px;
+                width: 100%;
+                font-size: 14px;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+            }
+            .nav-links a:last-child { border-bottom: none; }
+
+            .container { padding: 0 10px; margin: 12px auto; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
         <a href="/"><h1>SKLAD</h1></a>
-      <div>
+        <button class="burger" id="burgerBtn" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="nav-links" id="navLinks">
             <a href="/dashboard/">Dashboard</a>
             <a href="/">Tovarlar</a>
             <a href="/bozorga-ketish/">Bozorga ketish</a>
@@ -84,6 +166,24 @@
 
     
    
+    <script>
+    function toggleMenu() {
+        var btn = document.getElementById('burgerBtn');
+        var nav = document.getElementById('navLinks');
+        btn.classList.toggle('open');
+        nav.classList.toggle('open');
+    }
+    // закрыть меню при клике на ссылку
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.nav-links a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                document.getElementById('burgerBtn').classList.remove('open');
+                document.getElementById('navLinks').classList.remove('open');
+            });
+        });
+    });
+    </script>
+
     <script>
     function checkMessages() {
         fetch('/api/xabar-count/?direction=to_sklad')

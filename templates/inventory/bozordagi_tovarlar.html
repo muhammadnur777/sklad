@@ -124,10 +124,103 @@
         border-radius: 8px; font-size: 13px; cursor: pointer; width: 100%;
     }
     .no-products { text-align: center; padding: 60px; color: #999; font-size: 18px; }
+    .btn-sell-mobile { display: none; }
+    .btn-sell-desktop { display: inline; }
+
+    /* Плавающая кнопка корзины (только мобайл) */
+    .cart-fab {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 500;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 14px 22px;
+        font-size: 15px;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        cursor: pointer;
+    }
+    .cart-fab .fab-count {
+        background: #e94560;
+        border-radius: 50%;
+        padding: 1px 6px;
+        font-size: 12px;
+        margin-left: 6px;
+    }
+
+    /* Оверлей корзины (мобайл) */
+    .cart-mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 600;
+    }
+    .cart-mobile-overlay.open { display: block; }
+    .cart-mobile-sheet {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .cart-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .cart-mobile-header h3 { color: #1a1a2e; font-size: 16px; }
+    .cart-mobile-close {
+        background: #eee;
+        border: none;
+        border-radius: 50%;
+        width: 30px; height: 30px;
+        font-size: 16px;
+        cursor: pointer;
+        line-height: 30px;
+        text-align: center;
+    }
 
     @media (max-width: 768px) {
-        .bozor-wrap { flex-direction: column; }
-        .bozor-cart { width: 100%; position: static; }
+        /* Прячем десктопную корзину */
+        .bozor-cart { display: none; }
+        /* Убираем боковой flex */
+        .bozor-wrap { display: block; }
+
+        /* Скрываем колонку Korobka */
+        .col-korobka { display: none; }
+
+        /* Таблица не скроллится — просто компактная */
+        .product-list-table th,
+        .product-list-table td {
+            padding: 10px 10px;
+            font-size: 13px;
+        }
+        /* Кнопка: на мобайле показываем − */
+        .btn-sell-desktop { display: none; }
+        .btn-sell-mobile { display: inline; }
+        .btn-sell {
+            padding: 8px 14px;
+            font-size: 18px;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .search-box input { font-size: 16px; }
+        .modal-box { width: 95vw; padding: 18px; }
+
+        /* Показываем FAB и мобайл-оверлей */
+        .cart-fab { display: block; }
+
+        /* Нижний отступ чтобы FAB не перекрывал таблицу */
+        .bozor-wrap { padding-bottom: 80px; }
     }
 </style>
 {% endblock %}
@@ -144,7 +237,7 @@
             <thead>
                 <tr>
                     <th>Tovar</th>
-                    <th>Korobka</th>
+                    <th class="col-korobka">Korobka</th>
                     <th>Dona</th>
                     <th>Narx</th>
                     <th></th>
@@ -157,11 +250,11 @@
                         <strong>{{ item.product.name }}</strong>
                         <br><span style="font-size:12px; color:#888;">{{ item.product.category.name }}</span>
                     </td>
-                    <td>{{ item.box_count }} kor.</td>
+                    <td class="col-korobka">{{ item.box_count }} kor.</td>
                     <td>{{ item.quantity }} {{ item.product.unit.short_name }}</td>
                     <td style="font-weight:700; color:#28a745;">{{ item.product.sell_price|space_number }} so'm</td>
                     <td>
-                        <button class="btn-sell" onclick="openSell({{ item.product.id }}, '{{ item.product.name }}', {{ item.quantity }}, {{ item.product.sell_price }}, {{ item.product.per_box }})">Sotish</button>
+                        <button class="btn-sell" onclick="openSell({{ item.product.id }}, '{{ item.product.name }}', {{ item.quantity }}, {{ item.product.sell_price }}, {{ item.product.per_box }})"><span class="btn-sell-desktop">Sotish</span><span class="btn-sell-mobile">−</span></button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -192,6 +285,40 @@
             </select>
             <input type="date" id="cartDate">
             <button class="btn-confirm" onclick="confirmSale()">Sotish</button>
+            <button class="btn-clear" onclick="clearCart()">Tozalash</button>
+        </div>
+    </div>
+</div>
+
+<!-- FAB корзина (мобайл) -->
+<button class="cart-fab" id="cartFab" onclick="openMobileCart()">
+    🛒 Sotish <span class="fab-count" id="fabCount" style="display:none;">0</span>
+</button>
+
+<!-- Мобайл корзина оверлей -->
+<div class="cart-mobile-overlay" id="cartMobileOverlay" onclick="if(event.target===this)closeMobileCart()">
+    <div class="cart-mobile-sheet">
+        <div class="cart-mobile-header">
+            <h3>Sotish</h3>
+            <button class="cart-mobile-close" onclick="closeMobileCart()">✕</button>
+        </div>
+        <div id="cartContentMobile">
+            <div class="cart-empty" id="cartEmptyMobile">Tovar tanlanmagan</div>
+            <table class="cart-table" id="cartTableMobile" style="display:none;">
+                <thead><tr><th>Tovar</th><th>Soni</th><th>Summa</th><th></th></tr></thead>
+                <tbody id="cartBodyMobile"></tbody>
+            </table>
+        </div>
+        <div class="cart-total">Jami: <span id="cartTotalMobile">0</span> so'm</div>
+        <div class="cart-actions">
+            <input type="text" id="clientNameMobile" placeholder="Mijoz ismi">
+            <input type="text" id="clientPhoneMobile" placeholder="Telefon">
+            <select id="paymentStatusMobile">
+                <option value="paid">To'langan</option>
+                <option value="debt">Qarz (nasiya)</option>
+            </select>
+            <input type="date" id="cartDateMobile">
+            <button class="btn-confirm" onclick="confirmSaleMobile()">Sotish</button>
             <button class="btn-clear" onclick="clearCart()">Tozalash</button>
         </div>
     </div>
@@ -358,6 +485,107 @@ function getCookie(name) {
     return value ? value.pop() : '';
 }
 
-document.addEventListener('DOMContentLoaded', renderCart);
+document.addEventListener('DOMContentLoaded', function() {
+    renderCart();
+    var today = new Date().toISOString().split('T')[0];
+    var dm = document.getElementById('cartDateMobile');
+    if (dm) dm.value = today;
+});
+
+function openMobileCart() {
+    document.getElementById('cartMobileOverlay').classList.add('open');
+    renderCartMobile();
+}
+function closeMobileCart() {
+    document.getElementById('cartMobileOverlay').classList.remove('open');
+}
+
+function renderCartMobile() {
+    var body = document.getElementById('cartBodyMobile');
+    var table = document.getElementById('cartTableMobile');
+    var empty = document.getElementById('cartEmptyMobile');
+    var totalEl = document.getElementById('cartTotalMobile');
+    var fab = document.getElementById('fabCount');
+
+    // FAB счётчик
+    if (cart.length > 0) {
+        fab.textContent = cart.length;
+        fab.style.display = 'inline';
+    } else {
+        fab.style.display = 'none';
+    }
+
+    if (cart.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        totalEl.textContent = '0';
+        return;
+    }
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    var html = '';
+    var total = 0;
+    cart.forEach(function(item, i) {
+        var sum = item.qty * item.price;
+        total += sum;
+        html += '<tr><td>' + item.name + '</td>';
+        html += '<td>' + item.qty + ' dona</td>';
+        html += '<td>' + formatNum(sum) + '</td>';
+        html += '<td><button class="cart-remove" onclick="removeFromCart(' + i + ');renderCartMobile();">✕</button></td></tr>';
+    });
+    body.innerHTML = html;
+    totalEl.textContent = formatNum(total);
+}
+
+// Обновляем FAB после каждого добавления
+var _origAddToCart = addToCart;
+addToCart = function() {
+    _origAddToCart();
+    renderCartMobile();
+};
+var _origRemoveFromCart = removeFromCart;
+removeFromCart = function(i) {
+    _origRemoveFromCart(i);
+    renderCartMobile();
+};
+var _origClearCart = clearCart;
+clearCart = function() {
+    _origClearCart();
+    renderCartMobile();
+};
+
+function confirmSaleMobile() {
+    if (cart.length === 0) return alert('Tovar tanlanmagan!');
+    var date = document.getElementById('cartDateMobile').value;
+    if (!date) return alert('Sanani kiriting!');
+
+    var data = {
+        items: cart,
+        date: date,
+        client_name: document.getElementById('clientNameMobile').value,
+        client_phone: document.getElementById('clientPhoneMobile').value,
+        payment_status: document.getElementById('paymentStatusMobile').value,
+        shop_id: {{ shop.id }},
+    };
+
+    fetch('/api/bazar-sell/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.ok) {
+            cart = [];
+            localStorage.setItem('bazarCart_{{ shop.id }}', JSON.stringify(cart));
+            alert('Sotildi!');
+            location.reload();
+        } else {
+            alert(resp.error || 'Xatolik!');
+        }
+    })
+    .catch(function() { alert('Server xatoligi!'); });
+}
 </script>
 {% endblock %}

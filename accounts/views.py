@@ -17,8 +17,8 @@ def login_view(request):
 
         # Проверяем пароли бозара
         BOZOR_PASSWORDS = {
-            'bozor389': 1,  # пароль: bozor1 -> магазин с id=1
-            'bozor184': 2,  # пароль: bozor2 -> магазин с id=2
+            'bozor389': 3899,  # пароль: bozor1 -> магазин с id=1
+            'bozor184': 1844,  # пароль: bozor2 -> магазин с id=2
         }
 
         if password in BOZOR_PASSWORDS:

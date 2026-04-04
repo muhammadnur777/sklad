@@ -116,6 +116,27 @@
         cursor: pointer;
         width: 100%;
     }
+
+    @media (max-width: 768px) {
+        .debt-table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .debt-table th,
+        .debt-table td {
+            padding: 10px 10px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .btn-paid, .btn-details {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        .total-debt { font-size: 15px; }
+        .modal-box { width: 95vw; padding: 18px; }
+        .no-debts { padding: 30px; font-size: 15px; }
+    }
 </style>
 {% endblock %}
 

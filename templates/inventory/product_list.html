@@ -342,6 +342,114 @@
         color: #666;
     }
 
+    /* ===== RESPONSIVE ===== */
+
+    /* Широкий экран (≥ 1400px) */
+    @media (min-width: 1400px) {
+        .products-table th,
+        .products-table td {
+            padding: 16px 26px;
+            font-size: 15px;
+        }
+        .products-table .price {
+            font-size: 16px;
+        }
+        .filters input[type="text"] {
+            width: 340px;
+            font-size: 15px;
+        }
+        .cart-panel {
+            padding: 24px 28px;
+        }
+    }
+
+    /* Планшет (≤ 1024px) */
+    @media (max-width: 1024px) {
+        .products-table th,
+        .products-table td {
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .filters input[type="text"] {
+            width: 200px;
+        }
+    }
+
+    /* Мобильный (≤ 768px) */
+    @media (max-width: 768px) {
+        .filters {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .filters form {
+            display: flex;
+            width: 100%;
+        }
+        .filters input[type="text"] {
+            width: 100%;
+            flex: 1;
+        }
+        /* Горизонтальный скролл таблицы */
+        .products-table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .products-table th,
+        .products-table td {
+            padding: 10px 12px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        /* Корзина */
+        .cart-panel {
+            padding: 14px;
+        }
+        .cart-table th,
+        .cart-table td {
+            padding: 6px 6px;
+            font-size: 12px;
+        }
+        .cart-actions {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .cart-actions input[type="date"] {
+            width: 100%;
+        }
+        .btn-confirm,
+        .btn-clear {
+            width: 100%;
+            text-align: center;
+        }
+        /* Модалки */
+        .modal-box {
+            width: 95vw;
+            padding: 18px;
+        }
+        .stats-highlight .big-number {
+            font-size: 22px;
+        }
+    }
+
+    /* Маленький телефон (≤ 480px) */
+    @media (max-width: 480px) {
+        .products-table th,
+        .products-table td {
+            padding: 8px 8px;
+            font-size: 11px;
+        }
+        .cart-total {
+            font-size: 15px;
+        }
+        .no-products {
+            padding: 30px;
+            font-size: 15px;
+        }
+    }
+
 </style>
 
 <!-- Статистика товара -->
