@@ -9,9 +9,6 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# ───────────────────────────────────────────
-# ПРИЛОЖЕНИЯ
-# ───────────────────────────────────────────
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -22,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Наши приложения
+    
     'accounts',
     'inventory',
     'finance',
@@ -38,7 +35,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'accounts.middleware.ZoneMiddleware',  # наша кастомная middleware для зон доступа
+    'accounts.middleware.ZoneMiddleware',  
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -46,7 +43,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # папка templates в корне
+        'DIRS': [BASE_DIR / 'templates'],  
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -62,38 +59,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# ───────────────────────────────────────────
-# БАЗА ДАННЫХ — PostgreSQL
-# ───────────────────────────────────────────
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'sklad_db',
         'USER': 'postgres',
-        'PASSWORD': '8743',   # <-- сюда вставь свой пароль
+        'PASSWORD': '8743',   
         'HOST': 'localhost',
         'PORT': '5432',
     }
 }
 
 
-# ───────────────────────────────────────────
-# КАСТОМНАЯ МОДЕЛЬ ПОЛЬЗОВАТЕЛЯ
-# ───────────────────────────────────────────
 
 AUTH_USER_MODEL = 'accounts.User'
 
 
-# ───────────────────────────────────────────
-# ПАРОЛИ
-# ───────────────────────────────────────────
 
 AUTH_PASSWORD_VALIDATORS = []
 
-# ───────────────────────────────────────────
-# ЯЗЫК И ВРЕМЯ
-# ───────────────────────────────────────────
 
 LANGUAGE_CODE = 'uz'
 
@@ -104,9 +88,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-# ───────────────────────────────────────────
-# СТАТИКА И МЕДИА
-# ───────────────────────────────────────────
+
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
