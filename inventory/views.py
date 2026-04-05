@@ -222,7 +222,6 @@ def bozor_send_api(request):
                 price=price,
             )
 
-            # Добавляем на базар в нужный магазин
             bazar, created = BazarStock.objects.get_or_create(
                 product=product,
                 shop=shop,
@@ -471,7 +470,6 @@ def xabar_page(request, shop_id=None):
 
     is_bozor = '/bozor/' in request.path and '/xabar/' in request.path
 
-    # Получаем shop_id из URL если есть
     shop_id = None
     if is_bozor:
         parts = request.path.split('/')
@@ -559,7 +557,6 @@ def bozor_sotuvlar(request, shop_id):
         ).values_list('sale_id', flat=True)
         sales = sales.filter(id__in=sale_ids)
 
-    # Сумма за сегодня
     today_sales = BazarSale.objects.filter(
         shop=shop, sale_date=date.today()
     ).aggregate(total=Sum('total_amount'))['total'] or 0
@@ -572,7 +569,6 @@ def bozor_sotuvlar(request, shop_id):
         shop=shop, sale_date=date.today(), payment_status='paid'
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Сумма отфильтрованных
     filtered_total = sales.aggregate(total=Sum('total_amount'))['total'] or 0
 
     context = {
@@ -595,8 +591,7 @@ def bozorga_ketuvlar(request):
     from datetime import date
     from dateutil.relativedelta import relativedelta
 
-    # Автоудаление старше 1 год 7 месяцев
-    one_year_ago = date.today() - relativedelta(years=1, months=7)
+    one_year_ago = date.today() - relativedelta(years=2, months=7)
     Sale.objects.filter(note__startswith='Bozorga', sale_date__lt=one_year_ago).delete()
 
     date_from = request.GET.get('date_from', '')
@@ -611,7 +606,6 @@ def bozorga_ketuvlar(request):
         9: 'Sentabr', 10: 'Oktabr', 11: 'Noyabr', 12: 'Dekabr'
     }
 
-    # Определяем что показать в первой карточке
     if month:
         year, m = month.split('-')
         year = int(year)
@@ -633,14 +627,12 @@ def bozorga_ketuvlar(request):
             sale_date=date.today()
         ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Сумма за этот месяц
     this_month_sum = Sale.objects.filter(
         note__startswith='Bozorga',
         sale_date__year=date.today().year,
         sale_date__month=date.today().month,
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Генерируем месяцы: текущий + 6 вперёд
     months_list = []
     current = date.today()
     for i in range(7):
@@ -697,57 +689,47 @@ def dashboard(request):
     today = date.today()
     week_ago = today - timedelta(days=7)
 
-    # Общая стоимость склада
     all_products = Product.objects.filter(is_active=True)
     sklad_value = sum(p.stock * p.sell_price for p in all_products)
     sklad_count = all_products.count()
     sklad_items = sum(p.stock for p in all_products)
 
-    # Kirim за сегодня (ВСЕ Purchase за сегодня)
     kirim_today = Purchase.objects.filter(
         purchase_date=str(today),
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Kirim за этот месяц
     kirim_month = Purchase.objects.filter(
         purchase_date__year=today.year,
         purchase_date__month=today.month,
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Магазины
     shops = Shop.objects.all()
     shop_ids = list(shops.values_list('id', flat=True))
 
-    # Продажи из бозара — за сегодня (только с магазином)
     bozor_today = BazarSale.objects.filter(
         sale_date=today, shop_id__in=shop_ids
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Продажи из бозара — за неделю
     bozor_week = BazarSale.objects.filter(
         sale_date__gte=week_ago, shop_id__in=shop_ids
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Продажи из бозара — за месяц
     bozor_month = BazarSale.objects.filter(
         sale_date__year=today.year,
         sale_date__month=today.month,
         shop_id__in=shop_ids,
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Долги общие
     total_debts = BazarSale.objects.filter(
         payment_status='debt', shop_id__in=shop_ids
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # Bozorga ketuvlar shu oy
     ketuvlar_month = Sale.objects.filter(
         note__startswith='Bozorga',
         sale_date__year=today.year,
         sale_date__month=today.month,
     ).aggregate(total=Sum('total_amount'))['total'] or 0
 
-    # По каждому магазину
     shop_stats = []
     for shop in shops:
         shop_today = BazarSale.objects.filter(
@@ -775,8 +757,6 @@ def dashboard(request):
             'debts': shop_debts,
         })
 
-    # Данные для графика — последние 7 дней
-    # Данные для графика — последние 30 дней
     chart_labels_30 = []
     chart_data_30 = []
     shop_chart_data_30 = {}
@@ -797,7 +777,6 @@ def dashboard(request):
             ).aggregate(total=Sum('total_amount'))['total'] or 0
             shop_chart_data_30[shop.name].append(s_sum)
 
-    # Данные для графика — последние 7 дней
     chart_labels_7 = []
     chart_data_7 = []
     shop_chart_data_7 = {}
@@ -859,7 +838,6 @@ def product_stats_api(request, product_id):
     per_box = product.per_box if product.per_box > 0 else 1
     shops = Shop.objects.all()
 
-    # Продажи за этот месяц — общие
     month_sales = BazarSaleItem.objects.filter(
         product=product,
         sale__sale_date__year=today.year,
@@ -869,7 +847,6 @@ def product_stats_api(request, product_id):
     month_sum = month_sales.aggregate(total=Sum('total'))['total'] or 0
     month_boxes = month_qty // per_box
 
-    # По каждому магазину за этот месяц
     shops_month = []
     for shop in shops:
         s_qty = BazarSaleItem.objects.filter(
@@ -891,7 +868,6 @@ def product_stats_api(request, product_id):
             'total': s_sum,
         })
 
-    # Месяцы от марта 2026 до текущего
     months_data = []
     start_year = 2026
     start_month = 3
@@ -939,7 +915,6 @@ def product_stats_api(request, product_id):
             'is_current': (y == today.year and m == today.month),
         })
 
-    # Новые сверху
     months_data.reverse()
 
     data = {
@@ -975,7 +950,6 @@ def monthly_sales(request):
         9: 'Sentabr', 10: 'Oktabr', 11: 'Noyabr', 12: 'Dekabr'
     }
 
-    # От марта 2026 до текущего + 6 вперёд
     start_year = 2026
     start_month = 3
     total_months = (today.year - start_year) * 12 + (today.month - start_month) + 1 + 6
