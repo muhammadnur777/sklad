@@ -29,7 +29,8 @@ class ProductForm(forms.ModelForm):
         if self.instance.pk:
             per_box = self.instance.per_box if self.instance.per_box > 0 else 1
             self.fields['box_count_edit'].initial = self.instance.stock // per_box
-
+        self.fields['stock'].required = False
+        self.fields['stock'].help_text = 'Yozish shart emas — korobkadan avtomaticheskiy chiqadi'
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):

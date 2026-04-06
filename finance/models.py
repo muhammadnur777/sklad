@@ -52,7 +52,7 @@ class SaleItem(models.Model):
         related_name='items', verbose_name='Sotuv'
     )
     product = models.ForeignKey(
-        Product, on_delete=models.PROTECT,
+        Product, on_delete=models.CASCADE,
         verbose_name='Tovar'
     )
     quantity = models.IntegerField('Soni')
@@ -104,7 +104,7 @@ class PurchaseItem(models.Model):
         related_name='items', verbose_name='Kirim'
     )
     product = models.ForeignKey(
-        Product, on_delete=models.PROTECT,
+        Product, on_delete=models.CASCADE,
         verbose_name='Tovar'
     )
     quantity = models.IntegerField('Soni')
@@ -129,7 +129,7 @@ class StockMovement(models.Model):
         PURCHASE = 'purchase', 'Kirim'
 
     product = models.ForeignKey(
-        Product, on_delete=models.PROTECT,
+        Product, on_delete=models.CASCADE,
         verbose_name='Tovar'
     )
     movement_type = models.CharField(
@@ -220,7 +220,7 @@ class BazarSaleItem(models.Model):
         related_name='items', verbose_name='Sotuv'
     )
     product = models.ForeignKey(
-        Product, on_delete=models.PROTECT,
+        Product, on_delete=models.CASCADE,
         verbose_name='Tovar'
     )
     quantity = models.IntegerField('Soni')
