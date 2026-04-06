@@ -14,6 +14,13 @@ from django.http import HttpResponse
 from finance.models import BazarSaleItem, Shop
 from django.db.models import Sum
 from datetime import date
+from finance.models import BazarSale, Shop, Purchase
+from django.db.models import Sum
+from datetime import date, timedelta
+from finance.models import BazarSale, Shop
+from django.db.models import Sum
+from datetime import date
+
 
 @login_required(login_url='login')
 def product_list(request):
@@ -682,9 +689,19 @@ def delete_old_records(request):
 
 @login_required(login_url='login')
 def dashboard(request):
-    from finance.models import BazarSale, Shop, Purchase
-    from django.db.models import Sum
-    from datetime import date, timedelta
+    # Проверка пароля
+    if not request.session.get('dashboard_verified'):
+        if request.method == 'POST' and 'dash_password' in request.POST:
+            if request.POST.get('dash_password') == 'admin777':
+                request.session['dashboard_verified'] = True
+            else:
+                return render(request, 'inventory/dashboard_password.html', {
+                    'error': 'Parol noto\'g\'ri!'
+                })
+        else:
+            return render(request, 'inventory/dashboard_password.html', {})
+    
+   
 
     today = date.today()
     week_ago = today - timedelta(days=7)
@@ -937,9 +954,9 @@ def product_stats_api(request, product_id):
 
 @login_required(login_url='login')
 def monthly_sales(request):
-    from finance.models import BazarSale, Shop
-    from django.db.models import Sum
-    from datetime import date
+    if not request.session.get('dashboard_verified'):
+        return redirect('inventory:dashboard')
+    
 
     today = date.today()
     shops = Shop.objects.all()
