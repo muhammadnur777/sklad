@@ -272,20 +272,24 @@ def bozor_send_api(request):
 @login_required(login_url='login')
 def download_sale_excel(request, sale_id):
     sale = Sale.objects.get(pk=sale_id)
-    items = sale.items.select_related('product', 'product__unit')
+    items = sale.items.select_related('product', 'product__unit', 'product__category')
+
+    XITOY_CATEGORIES = ['Detskiy', 'Hoz tovar']
+
+    xitoy_items = [i for i in items if i.product.category and i.product.category.name in XITOY_CATEGORIES]
+    seh_items = [i for i in items if not i.product.category or i.product.category.name not in XITOY_CATEGORIES]
 
     wb = Workbook()
     ws = wb.active
     ws.title = 'Bozorga ketish'
 
     header_font = Font(bold=True, size=12, color='FFFFFF')
-    header_fill = PatternFill(start_color='1a1a2e', end_color='1a1a2e', fill_type='solid')
+    header_fill_xitoy = PatternFill(start_color='28a745', end_color='28a745', fill_type='solid')
+    header_fill_seh = PatternFill(start_color='e65100', end_color='e65100', fill_type='solid')
     header_align = Alignment(horizontal='center', vertical='center')
     border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin'),
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
     )
     bold_font = Font(bold=True, size=11)
 
@@ -299,7 +303,6 @@ def download_sale_excel(request, sale_id):
     ws['A2'].alignment = Alignment(horizontal='center')
     ws['A2'].font = Font(size=10, color='888888')
 
-    headers = ['№', 'Tovar', 'Korobka', 'Dona', 'Narxi (so\'m)', 'Summa (so\'m)']
     ws.column_dimensions['A'].width = 6
     ws.column_dimensions['B'].width = 30
     ws.column_dimensions['C'].width = 12
@@ -307,48 +310,65 @@ def download_sale_excel(request, sale_id):
     ws.column_dimensions['E'].width = 18
     ws.column_dimensions['F'].width = 20
 
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_align
-        cell.border = border
+    row = 4
+    headers = ['№', 'Tovar', 'Korobka', 'Dona', 'Narxi', 'Summa']
 
-    row = 5
-    for i, item in enumerate(items, 1):
-        per_box = item.product.per_box if item.product.per_box > 0 else 1
-        boxes = item.quantity // per_box
-        box_text = f'{boxes} kor.'
-        
-
-        ws.cell(row=row, column=1, value=i).border = border
+    def write_section(ws, row, title, items_list, header_fill):
+        ws.merge_cells(f'A{row}:F{row}')
+        ws.cell(row=row, column=1, value=title).font = Font(bold=True, size=13, color='FFFFFF')
+        ws.cell(row=row, column=1).fill = header_fill
         ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
-
-        ws.cell(row=row, column=2, value=item.product.name).border = border
-
-        
-        ws.cell(row=row, column=3, value=box_text).border = border
-        ws.cell(row=row, column=3).alignment = Alignment(horizontal='center')
-
-        ws.cell(row=row, column=4, value=f'{item.quantity} {item.product.unit.short_name}').border = border
-        ws.cell(row=row, column=4).alignment = Alignment(horizontal='center')
-
-        ws.cell(row=row, column=5, value=item.price).border = border
-        ws.cell(row=row, column=5).number_format = '#,##0'
-        ws.cell(row=row, column=5).alignment = Alignment(horizontal='right')
-
-        ws.cell(row=row, column=6, value=item.total).border = border
-        ws.cell(row=row, column=6).number_format = '#,##0'
-        ws.cell(row=row, column=6).alignment = Alignment(horizontal='right')
-        ws.cell(row=row, column=6).font = bold_font
-
         row += 1
 
-    row += 1
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+            cell.border = border
+        row += 1
+
+        section_total = 0
+        for i, item in enumerate(items_list, 1):
+            per_box = item.product.per_box if item.product.per_box > 0 else 1
+            boxes = item.quantity // per_box
+
+            ws.cell(row=row, column=1, value=i).border = border
+            ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
+            ws.cell(row=row, column=2, value=item.product.name).border = border
+            ws.cell(row=row, column=3, value=f'{boxes} kor.').border = border
+            ws.cell(row=row, column=3).alignment = Alignment(horizontal='center')
+            ws.cell(row=row, column=4, value=f'{item.quantity} dona').border = border
+            ws.cell(row=row, column=4).alignment = Alignment(horizontal='center')
+            ws.cell(row=row, column=5, value=item.price).border = border
+            ws.cell(row=row, column=5).number_format = '#,##0'
+            ws.cell(row=row, column=5).alignment = Alignment(horizontal='right')
+            ws.cell(row=row, column=6, value=item.total).border = border
+            ws.cell(row=row, column=6).number_format = '#,##0'
+            ws.cell(row=row, column=6).alignment = Alignment(horizontal='right')
+            ws.cell(row=row, column=6).font = bold_font
+            section_total += item.total
+            row += 1
+
+        ws.merge_cells(f'A{row}:E{row}')
+        ws.cell(row=row, column=1, value=f'{title} JAMI:').font = Font(bold=True, size=12)
+        ws.cell(row=row, column=1).alignment = Alignment(horizontal='right')
+        ws.cell(row=row, column=6, value=section_total).font = Font(bold=True, size=12, color='e94560')
+        ws.cell(row=row, column=6).number_format = '#,##0'
+        ws.cell(row=row, column=6).alignment = Alignment(horizontal='right')
+        row += 2
+        return row
+
+    if xitoy_items:
+        row = write_section(ws, row, 'XITOY', xitoy_items, header_fill_xitoy)
+
+    if seh_items:
+        row = write_section(ws, row, 'SEH', seh_items, header_fill_seh)
+
     ws.merge_cells(f'A{row}:E{row}')
-    ws.cell(row=row, column=1, value='JAMI:').font = Font(bold=True, size=13)
+    ws.cell(row=row, column=1, value='UMUMIY JAMI:').font = Font(bold=True, size=14)
     ws.cell(row=row, column=1).alignment = Alignment(horizontal='right')
-    ws.cell(row=row, column=6, value=sale.total_amount).font = Font(bold=True, size=13, color='e94560')
+    ws.cell(row=row, column=6, value=sale.total_amount).font = Font(bold=True, size=14, color='e94560')
     ws.cell(row=row, column=6).number_format = '#,##0'
     ws.cell(row=row, column=6).alignment = Alignment(horizontal='right')
 
@@ -618,14 +638,14 @@ def bozorga_ketuvlar(request):
     from datetime import date
     from dateutil.relativedelta import relativedelta
 
-    one_year_ago = date.today() - relativedelta(years=2, months=7)
+    one_year_ago = date.today() - relativedelta(years=1, months=7)
     Sale.objects.filter(note__startswith='Bozorga', sale_date__lt=one_year_ago).delete()
 
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     month = request.GET.get('month', '')
 
-    sales = Sale.objects.filter(note__startswith='Bozorga').select_related('user')
+    sales = Sale.objects.filter(note__startswith='Bozorga').select_related('user').prefetch_related('items__product__category')
 
     month_names = {
         1: 'Yanvar', 2: 'Fevral', 3: 'Mart', 4: 'Aprel',
@@ -672,8 +692,35 @@ def bozorga_ketuvlar(request):
         label = f'{month_names[m]} {y}'
         months_list.append({'key': key, 'label': label})
 
+    
+    XITOY_CATEGORIES = ['Detskiy', 'Hoz tovar']
+
+    sales_data = []
+    for sale in sales[:100]:
+        xitoy_items = []
+        seh_items = []
+        xitoy_total = 0
+        seh_total = 0
+
+        for item in sale.items.all():
+            cat_name = item.product.category.name if item.product.category else ''
+            if cat_name in XITOY_CATEGORIES:
+                xitoy_items.append(item)
+                xitoy_total += item.total
+            else:
+                seh_items.append(item)
+                seh_total += item.total
+
+        sales_data.append({
+            'sale': sale,
+            'xitoy_items': xitoy_items,
+            'seh_items': seh_items,
+            'xitoy_total': xitoy_total,
+            'seh_total': seh_total,
+        })
+
     context = {
-        'sales': sales[:100],
+        'sales_data': sales_data,
         'selected_label': selected_label,
         'selected_sum': selected_sum,
         'this_month_sum': this_month_sum,
