@@ -2,12 +2,6 @@
 
 from django.contrib import admin
 from django.urls import path, include
-from inventory.views import (
-    product_price_api, bozor_send_api, download_sale_excel,
-    bazar_sell_api, bazar_sale_detail_api, bazar_mark_paid_api,
-    xabar_count_api, xabar_read_api, delete_old_records
-
-)
 
 from inventory.views import (
     product_price_api, bozor_send_api, download_sale_excel,
