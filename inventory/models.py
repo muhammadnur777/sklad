@@ -65,3 +65,21 @@ class Product(models.Model):
     @property
     def total_value(self):
         return self.stock * self.sell_price
+    
+
+class PriceHistory(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE,
+        verbose_name='Tovar', related_name='price_history'
+    )
+    old_price = models.IntegerField('Eski narx')
+    new_price = models.IntegerField('Yangi narx')
+    changed_at = models.DateTimeField('O\'zgargan sana', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Narx tarixi'
+        verbose_name_plural = 'Narx tarixi'
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f'{self.product.name}: {self.old_price} → {self.new_price}'

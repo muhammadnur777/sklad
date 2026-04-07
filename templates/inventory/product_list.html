@@ -530,9 +530,47 @@
     <a href="?low=1" class="cat-btn {% if low_stock %}active{% endif %}" style="{% if low_stock %}background:#e94560; color:#fff; border-color:#e94560;{% else %}background:#fff5f5; color:#e94560; border-color:#e94560;{% endif %}">
         Kam qolayotgan
     </a>
+    <a href="?price_changed=1" class="cat-btn {% if price_changed %}active{% endif %}" style="{% if price_changed %}background:#0d6efd; color:#fff; border-color:#0d6efd;{% else %}background:#e8f1ff; color:#0d6efd; border-color:#0d6efd;{% endif %}">
+        Narxi o'zgargan
+    </a>
 </div>
 
-{% if products %}
+{% if price_history %}
+<div style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:20px;">
+    <h3 style="margin-bottom:12px; color:#1a1a2e; font-size:16px;">Narxi o'zgargan tovarlar</h3>
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid #eee;">
+                <th style="text-align:left; padding:8px; font-size:12px; color:#888;">Sana</th>
+                <th style="text-align:left; padding:8px; font-size:12px; color:#888;">Tovar</th>
+                <th style="text-align:left; padding:8px; font-size:12px; color:#888;">Eski narx</th>
+                <th style="text-align:left; padding:8px; font-size:12px; color:#888;">Yangi narx</th>
+                <th style="text-align:left; padding:8px; font-size:12px; color:#888;">Farq</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ph in price_history %}
+            <tr style="border-bottom:1px solid #f5f5f5;">
+                <td style="padding:8px; font-size:13px; color:#888;">{{ ph.changed_at|date:"d.m.Y H:i" }}</td>
+                <td style="padding:8px; font-size:14px; font-weight:600;">{{ ph.product.name }}</td>
+                <td style="padding:8px; font-size:14px; color:#e94560; text-decoration:line-through;">{{ ph.old_price|space_number }} so'm</td>
+                <td style="padding:8px; font-size:14px; font-weight:700; color:#28a745;">{{ ph.new_price|space_number }} so'm</td>
+                <td style="padding:8px; font-size:13px;">
+                    {% if ph.new_price > ph.old_price %}
+                        <span style="color:#28a745;">↑ oshdi</span>
+                    {% else %}
+                        <span style="color:#e94560;">↓ tushdi</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+
+{% if products and not price_changed %}
 <table class="products-table">
     <thead>
         <tr>
@@ -542,6 +580,7 @@
             <th>Korobka</th>
             <th>1 dona</th>
             <th>Summa</th>
+            <th>Narx o'zgarishi</th>
         </tr>
     </thead>
     <tbody>
@@ -556,6 +595,13 @@
             <td>{{ product.box_count }} kor.</td>
             <td class="price">{{ product.sell_price|space_number }} so'm</td>
             <td class="price">{{ product.total_value|space_number }} so'm</td>
+            <td style="text-align:center;">
+                {% if product.id in changed_product_ids %}
+                    <span style="color:#e94560; font-weight:600;">Ha</span>
+                {% else %}
+                    <span style="color:#ccc;">Yo'q</span>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>
@@ -568,6 +614,8 @@
     </button>
 </div>
 {% endif %}
+
+
 
 {% else %}
 <div class="no-products">Tovar topilmadi</div>

@@ -20,24 +20,40 @@ from datetime import date, timedelta
 from finance.models import BazarSale, Shop
 from django.db.models import Sum
 from datetime import date
-
+from .models import PriceHistory
 
 @login_required(login_url='login')
 def product_list(request):
+    from .models import PriceHistory
+
     products = Product.objects.filter(is_active=True).select_related('category', 'unit')
     categories = Category.objects.all()
 
     category_id = request.GET.get('category')
     low_stock = request.GET.get('low')
+    price_changed = request.GET.get('price_changed')
 
     if category_id:
         products = products.filter(category_id=category_id)
 
     if low_stock:
         products = [p for p in products if p.is_low_stock and p.min_stock > 0]
+
     search = request.GET.get('search', '')
     if search:
-        products = products.filter(name__icontains=search)
+        if isinstance(products, list):
+            products = [p for p in products if search.lower() in p.name.lower()]
+        else:
+            products = products.filter(name__icontains=search)
+
+    # Товары с изменёнными ценами
+    price_history = None
+    if price_changed:
+        price_history = PriceHistory.objects.select_related('product').order_by('-changed_at')[:50]
+
+    # Товары у которых менялась цена
+   
+    changed_product_ids = set(PriceHistory.objects.values_list('product_id', flat=True))
 
     context = {
         'products': products,
@@ -45,8 +61,12 @@ def product_list(request):
         'current_category': category_id,
         'search': search,
         'low_stock': low_stock,
+        'price_changed': price_changed,
+        'price_history': price_history,
+        'changed_product_ids': changed_product_ids,
     }
     return render(request, 'inventory/product_list.html', context)
+
 
 
 @login_required(login_url='login')
@@ -168,7 +188,7 @@ def product_price_api(request, product_id):
 @login_required(login_url='login')
 def bozor_page(request):
     from finance.models import Shop
-    products = Product.objects.filter(is_active=True, stock__gt=0).select_related('category', 'unit')
+    products = Product.objects.filter(is_active=True).select_related('category', 'unit')
     shops = Shop.objects.all()
     context = {
         'products': products,

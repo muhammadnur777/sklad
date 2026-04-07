@@ -346,7 +346,7 @@ function closeModal() {
 function addToCart() {
     var qty = parseInt(document.getElementById('modalQty').value);
     if (!qty || qty <= 0) return alert('Sonini kiriting!');
-    if (qty > currentProduct.stock) return alert('Qoldiqdan ko\'p!');
+    
 
     var existing = cart.find(function(item) { return item.id === currentProduct.id; });
     if (existing) {
