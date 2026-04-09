@@ -262,3 +262,18 @@ class Message(models.Model):
 
     def __str__(self):
         return f'{self.get_direction_display()} — {self.text[:30]}'
+
+
+class BozorPayment(models.Model):
+    amount = models.IntegerField('Summa')
+    payment_date = models.DateField('Sana')
+    note = models.TextField('Izoh', blank=True)
+    created_at = models.DateTimeField('Yaratilgan', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Bozordan pul'
+        verbose_name_plural = 'Bozordan pullar'
+        ordering = ['-payment_date', '-created_at']
+
+    def __str__(self):
+        return f'{self.amount} so\'m — {self.payment_date}'

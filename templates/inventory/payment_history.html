@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load number_format %}
+
+{% block extra_css %}
+<style>
+    .page-title { font-size: 22px; color: #1a1a2e; margin-bottom: 20px; }
+    .back-link { color: #0d6efd; text-decoration: none; font-size: 14px; margin-bottom: 16px; display: inline-block; }
+    .month-card {
+        background: #fff; border-radius: 12px; padding: 20px;
+        margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        cursor: pointer; transition: transform 0.2s;
+    }
+    .month-card:hover { transform: translateY(-2px); }
+    .month-card.current { border-left: 4px solid #0d6efd; }
+    .month-card.zero { opacity: 0.5; }
+    .month-header { display: flex; justify-content: space-between; align-items: center; }
+    .month-name { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+    .month-total { font-size: 20px; font-weight: 700; color: #0d6efd; }
+    .month-details {
+        display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;
+    }
+    .month-details.active { display: block; }
+    .pay-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0; border-bottom: 1px solid #f5f5f5;
+    }
+    .pay-row:last-child { border-bottom: none; }
+    .pay-date { font-size: 13px; color: #888; }
+    .pay-amount { font-size: 14px; font-weight: 600; color: #0d6efd; }
+    .pay-note { font-size: 12px; color: #aaa; margin-left: 8px; }
+    .no-data { text-align: center; padding: 40px; color: #ccc; font-size: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/bozorga-ketuvlar/" class="back-link">← Ketuvlar</a>
+<h2 class="page-title">Berilgan pullar tarixi</h2>
+
+{% for month in months_data %}
+<div class="month-card {% if month.is_current %}current{% endif %} {% if month.total == 0 %}zero{% endif %}" onclick="this.querySelector('.month-details').classList.toggle('active')">
+    <div class="month-header">
+        <span class="month-name">
+            {{ month.month }} {{ month.year }}
+            {% if month.is_current %}<span style="font-size:11px; color:#0d6efd; margin-left:6px;">shu oy</span>{% endif %}
+        </span>
+        <span class="month-total">{{ month.total|space_number }} so'm</span>
+    </div>
+    <div class="month-details">
+        {% if month.payments %}
+            {% for pay in month.payments %}
+            <div class="pay-row">
+                <div>
+                    <span class="pay-date">{{ pay.payment_date }}</span>
+                    {% if pay.note %}<span class="pay-note">— {{ pay.note }}</span>{% endif %}
+                </div>
+                <span class="pay-amount">{{ pay.amount|space_number }} so'm</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="text-align:center; color:#ccc; padding:12px;">Pul kiritilmagan</div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

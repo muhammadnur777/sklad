@@ -637,7 +637,22 @@ def bozorga_ketuvlar(request):
     from django.db.models import Sum
     from datetime import date
     from dateutil.relativedelta import relativedelta
+    from finance.models import BozorPayment
 
+    # Berilgan pul — сначала обрабатываем POST
+    if request.method == 'POST' and 'payment_amount' in request.POST:
+        pay_amount = int(request.POST.get('payment_amount', 0) or 0)
+        pay_date = request.POST.get('payment_date', str(date.today()))
+        pay_note = request.POST.get('payment_note', '')
+        if pay_amount > 0:
+            BozorPayment.objects.create(
+                amount=pay_amount,
+                payment_date=pay_date,
+                note=pay_note,
+            )
+            return redirect('/bozorga-ketuvlar/')
+
+    # Автоудаление старых
     one_year_ago = date.today() - relativedelta(years=1, months=7)
     Sale.objects.filter(note__startswith='Bozorga', sale_date__lt=one_year_ago).delete()
 
@@ -692,7 +707,6 @@ def bozorga_ketuvlar(request):
         label = f'{month_names[m]} {y}'
         months_list.append({'key': key, 'label': label})
 
-    
     XITOY_CATEGORIES = ['Detskiy', 'Hoz tovar']
 
     sales_data = []
@@ -719,6 +733,16 @@ def bozorga_ketuvlar(request):
             'seh_total': seh_total,
         })
 
+    # Berilgan pul statistika
+    payment_today = BozorPayment.objects.filter(
+        payment_date=date.today()
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    payment_month = BozorPayment.objects.filter(
+        payment_date__year=date.today().year,
+        payment_date__month=date.today().month,
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
     context = {
         'sales_data': sales_data,
         'selected_label': selected_label,
@@ -728,9 +752,10 @@ def bozorga_ketuvlar(request):
         'date_to': date_to,
         'current_month': month,
         'months_list': months_list,
+        'payment_today': payment_today,
+        'payment_month': payment_month,
     }
     return render(request, 'inventory/bozorga_ketuvlar.html', context)
-
 
 @require_POST
 @login_required(login_url='login')
@@ -832,6 +857,12 @@ def dashboard(request):
             shop=shop, payment_status='debt'
         ).aggregate(total=Sum('total_amount'))['total'] or 0
 
+        from finance.models import BazarStock
+        shop_bazar_value = 0
+        bazar_stocks = BazarStock.objects.filter(shop=shop, quantity__gt=0).select_related('product')
+        for bs in bazar_stocks:
+            shop_bazar_value += bs.quantity * bs.product.sell_price
+
         shop_stats.append({
             'id': shop.id,
             'name': shop.name,
@@ -839,6 +870,7 @@ def dashboard(request):
             'week': shop_week,
             'month': shop_month,
             'debts': shop_debts,
+            'bazar_value': shop_bazar_value,
         })
 
     chart_labels_30 = []
@@ -881,6 +913,8 @@ def dashboard(request):
             ).aggregate(total=Sum('total_amount'))['total'] or 0
             shop_chart_data_7[shop.name].append(s_sum)
 
+    total_bazar_value = sum(s['bazar_value'] for s in shop_stats)
+
     context = {
         'sklad_value': sklad_value,
         'sklad_count': sklad_count,
@@ -899,6 +933,7 @@ def dashboard(request):
         'chart_labels_7': chart_labels_7,
         'chart_data_7': chart_data_7,
         'shop_chart_data_7': shop_chart_data_7,
+        'total_bazar_value': total_bazar_value,
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -954,7 +989,7 @@ def product_stats_api(request, product_id):
 
     months_data = []
     start_year = 2026
-    start_month = 3
+    start_month = 4
     total_months = (today.year - start_year) * 12 + (today.month - start_month) + 1 + 6
 
     for i in range(total_months):
@@ -1035,7 +1070,7 @@ def monthly_sales(request):
     }
 
     start_year = 2026
-    start_month = 3
+    start_month = 4
     total_months = (today.year - start_year) * 12 + (today.month - start_month) + 1 + 6
 
     months_data = []
@@ -1118,3 +1153,50 @@ def bazar_add_product(request, shop_id):
         'shop': shop,
     }
     return render(request, 'inventory/bazar_add_product.html', context)
+
+
+
+@login_required(login_url='login')
+def payment_history(request):
+    from finance.models import BozorPayment
+    from django.db.models import Sum
+    from datetime import date
+
+    month_names = {
+        1: 'Yanvar', 2: 'Fevral', 3: 'Mart', 4: 'Aprel',
+        5: 'May', 6: 'Iyun', 7: 'Iyul', 8: 'Avgust',
+        9: 'Sentabr', 10: 'Oktabr', 11: 'Noyabr', 12: 'Dekabr'
+    }
+
+    today = date.today()
+    start_year = 2026
+    start_month = 4
+    total_months = (today.year - start_year) * 12 + (today.month - start_month) + 1
+
+    months_data = []
+    for i in range(total_months):
+        m = start_month + i
+        y = start_year
+        while m > 12:
+            m -= 12
+            y += 1
+
+        payments = BozorPayment.objects.filter(
+            payment_date__year=y, payment_date__month=m
+        )
+        month_total = payments.aggregate(total=Sum('amount'))['total'] or 0
+
+        months_data.append({
+            'month': month_names[m],
+            'year': y,
+            'total': month_total,
+            'payments': payments,
+            'is_current': (y == today.year and m == today.month),
+        })
+
+    months_data.reverse()
+
+    context = {
+        'months_data': months_data,
+    }
+    return render(request, 'inventory/payment_history.html', context)

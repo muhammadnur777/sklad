@@ -101,6 +101,18 @@
         <div class="stat-value color-sklad">{{ sklad_value|space_number }} so'm</div>
         <div style="font-size:12px; color:#888; margin-top:4px;">{{ sklad_count }} tovar ({{ sklad_items }} dona)</div>
     </div>
+    <div class="stat-card" style="position:relative;" onmouseenter="document.getElementById('bazarHover').style.display='block'" onmouseleave="document.getElementById('bazarHover').style.display='none'">
+        <div class="stat-label">Bozordagi xamma tovarlar summasi</div>
+        <div class="stat-value" style="color:#fd7e14;">{{ total_bazar_value|space_number }} so'm</div>
+        <div id="bazarHover" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.15); padding:12px; z-index:10; margin-top:4px;">
+            {% for shop in shop_stats %}
+            <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+                <span style="color:#888;">{{ shop.name }}</span>
+                <span style="font-weight:600; color:#fd7e14;">{{ shop.bazar_value|space_number }} so'm</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
     <div class="stat-card">
         <div class="stat-label">Kirim skladga shu oy</div>
         <div class="stat-value color-blue">{{ kirim_month|space_number }} so'm</div>
@@ -167,6 +179,10 @@
         <div class="shop-stat">
             <span class="label">Qarzlar</span>
             <span class="value color-red">{{ shop.debts|space_number }} so'm</span>
+        </div>
+        <div class="shop-stat">
+            <span class="label">xamma tovarlar summasi</span>
+            <span class="value" style="color:#fd7e14;">{{ shop.bazar_value|space_number }} so'm</span>
         </div>
         <div style="margin-top:12px; text-align:center;">
             <a href="/bozor/{{ shop.id }}/sotuvlar/" style="color:#0d6efd; font-size:13px; text-decoration:none;">Sotuvlar batafsil →</a>

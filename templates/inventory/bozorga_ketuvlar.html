@@ -94,6 +94,34 @@
     .modal-btns .btn-danger { background: #e94560; color: #fff; }
     .modal-btns .btn-cancel { background: #eee; color: #333; }
 </style>
+
+<!-- Pul kiritish modal -->
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3 style="color:#0d6efd;">Berilgan pul kiritish</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#888;">Summa (so'm)</label>
+                <input type="number" name="payment_amount" required style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:16px; text-align:center;" oninput="showPayFormat(this)">
+                <div id="payFormatDisplay" style="color:#888; font-size:13px; margin-top:4px;"></div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#888;">Sana</label>
+                <input type="date" name="payment_date" value="" id="paymentDate" required style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#888;">Izoh (yozsa bo'ladi)</label>
+                <input type="text" name="payment_note" placeholder="Izoh..." style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="submit" style="flex:1; padding:12px; background:#0d6efd; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Saqlash</button>
+                <button type="button" onclick="closePaymentModal()" style="flex:1; padding:12px; background:#eee; color:#333; border:none; border-radius:8px; font-size:14px; cursor:pointer;">Bekor</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block content %}
@@ -107,6 +135,12 @@
     <div class="stat-card month">
         <div class="stat-label">Shu oy</div>
         <div class="stat-value">{{ this_month_sum|space_number }} so'm</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #0d6efd; cursor:pointer;" onclick="openPaymentModal()">
+        <div class="stat-label">Berilgan pul (bugun)</div>
+        <div class="stat-value" style="color:#0d6efd;">{{ payment_today|space_number }} so'm</div>
+        <div style="font-size:12px; color:#888; margin-top:4px;">Shu oy: {{ payment_month|space_number }} so'm</div>
+        <a href="/bozorga-ketuvlar/pullar/" style="font-size:12px; color:#0d6efd; margin-top:4px; display:block;">Batafsil →</a>
     </div>
 </div>
 
@@ -246,5 +280,26 @@ function getCookie(name) {
     var value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return value ? value.pop() : '';
 }
+
+function openPaymentModal() {
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('paymentModal').classList.add('active');
+}
+function closePaymentModal() {
+    document.getElementById('paymentModal').classList.remove('active');
+}
+function showPayFormat(input) {
+    var display = document.getElementById('payFormatDisplay');
+    if (input.value) {
+        var num = parseInt(input.value);
+        display.textContent = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + " so'm";
+    } else {
+        display.textContent = '';
+    }
+}
+document.getElementById('paymentModal').addEventListener('click', function(e) {
+    if (e.target === this) closePaymentModal();
+});
+
 </script>
 {% endblock %}
