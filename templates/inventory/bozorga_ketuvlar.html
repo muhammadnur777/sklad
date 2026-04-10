@@ -133,15 +133,28 @@
         <div class="stat-value">{{ selected_sum|space_number }} so'm</div>
     </div>
     <div class="stat-card month">
-        <div class="stat-label">Shu oy</div>
+        <div class="stat-label">Shu oy obshiy</div>
         <div class="stat-value">{{ this_month_sum|space_number }} so'm</div>
     </div>
+    {% for sh in shop_ketuvlar %}
+    <div class="stat-card" style="border-left:4px solid #28a745;">
+        <div class="stat-label">{{ sh.name }} (shu oy)</div>
+        <div class="stat-value" style="color:#28a745;">{{ sh.month_sum|space_number }} so'm</div>
+    </div>
+    {% endfor %}
     <div class="stat-card" style="border-left:4px solid #0d6efd; cursor:pointer;" onclick="openPaymentModal()">
         <div class="stat-label">Berilgan pul (bugun)</div>
         <div class="stat-value" style="color:#0d6efd;">{{ payment_today|space_number }} so'm</div>
         <div style="font-size:12px; color:#888; margin-top:4px;">Shu oy: {{ payment_month|space_number }} so'm</div>
         <a href="/bozorga-ketuvlar/pullar/" style="font-size:12px; color:#0d6efd; margin-top:4px; display:block;">Batafsil →</a>
     </div>
+</div>
+
+<div class="months-row" style="margin-bottom:8px;">
+    <a href="/bozorga-ketuvlar/" class="month-btn {% if not shop_filter %}active{% endif %}" style="{% if not shop_filter %}background:#1a1a2e; color:#fff; border-color:#1a1a2e;{% endif %}">Barchasi</a>
+    {% for sh in all_shops %}
+    <a href="?shop={{ sh.id }}{% if current_month %}&month={{ current_month }}{% endif %}" class="month-btn {% if shop_filter == sh.id|stringformat:'d' %}active{% endif %}" style="{% if shop_filter == sh.id|stringformat:'d' %}background:#28a745; color:#fff; border-color:#28a745;{% endif %}">{{ sh.name }}</a>
+    {% endfor %}
 </div>
 
 <div class="months-row">

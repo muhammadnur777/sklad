@@ -659,8 +659,16 @@ def bozorga_ketuvlar(request):
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     month = request.GET.get('month', '')
+    shop_filter = request.GET.get('shop', '')
 
     sales = Sale.objects.filter(note__startswith='Bozorga').select_related('user').prefetch_related('items__product__category')
+    if shop_filter:
+        from finance.models import Shop
+        try:
+            shop_obj = Shop.objects.get(pk=shop_filter)
+            sales = sales.filter(note__contains=shop_obj.name)
+        except Shop.DoesNotExist:
+            pass
 
     month_names = {
         1: 'Yanvar', 2: 'Fevral', 3: 'Mart', 4: 'Aprel',
@@ -694,6 +702,22 @@ def bozorga_ketuvlar(request):
         sale_date__year=date.today().year,
         sale_date__month=date.today().month,
     ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+    # Суммы по каждому магазину
+    from finance.models import Shop as ShopModel
+    all_shops = ShopModel.objects.all()
+    shop_ketuvlar = []
+    for sh in all_shops:
+        sh_month = Sale.objects.filter(
+            note__contains=sh.name,
+            sale_date__year=date.today().year,
+            sale_date__month=date.today().month,
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+        shop_ketuvlar.append({
+            'id': sh.id,
+            'name': sh.name,
+            'month_sum': sh_month,
+        })
 
     months_list = []
     current = date.today()
@@ -743,6 +767,7 @@ def bozorga_ketuvlar(request):
         payment_date__month=date.today().month,
     ).aggregate(total=Sum('amount'))['total'] or 0
 
+    
     context = {
         'sales_data': sales_data,
         'selected_label': selected_label,
@@ -754,6 +779,9 @@ def bozorga_ketuvlar(request):
         'months_list': months_list,
         'payment_today': payment_today,
         'payment_month': payment_month,
+        'shop_filter': shop_filter,
+        'all_shops': all_shops,
+        'shop_ketuvlar': shop_ketuvlar,
     }
     return render(request, 'inventory/bozorga_ketuvlar.html', context)
 
