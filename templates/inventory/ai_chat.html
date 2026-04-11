@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        max-width: 700px;
+        margin: 20px auto;
+    }
+    .chat-title {
+        font-size: 20px;
+        color: #1a1a2e;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .chat-messages {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        min-height: 400px;
+        max-height: 600px;
+        overflow-y: auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 12px;
+    }
+    .msg {
+        margin-bottom: 16px;
+        display: flex;
+    }
+    .msg.user { justify-content: flex-end; }
+    .msg.ai { justify-content: flex-start; }
+    .msg-bubble {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+    .msg.user .msg-bubble {
+        background: #1a1a2e;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+    .msg.ai .msg-bubble {
+        background: #f0f0f5;
+        color: #1a1a2e;
+        border-bottom-left-radius: 4px;
+    }
+    .chat-input-row {
+        display: flex;
+        gap: 8px;
+    }
+    .chat-input-row input {
+        flex: 1;
+        padding: 14px 18px;
+        border: 2px solid #eee;
+        border-radius: 12px;
+        font-size: 15px;
+        outline: none;
+    }
+    .chat-input-row input:focus { border-color: #1a1a2e; }
+    .chat-input-row button {
+        padding: 14px 24px;
+        background: #1a1a2e;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .chat-input-row button:hover { background: #16213e; }
+    .chat-input-row button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    .typing-indicator {
+        display: none;
+        color: #888;
+        font-size: 13px;
+        padding: 8px 0;
+    }
+    .typing-indicator.active { display: block; }
+    .suggestions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    .suggestion-btn {
+        padding: 6px 14px;
+        background: #f0f0f5;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #555;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .suggestion-btn:hover { background: #e0e0e8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-title">
+        <span style="font-size:24px;">🤖</span> AI Yordamchi
+    </div>
+
+    <div class="suggestions">
+        <button class="suggestion-btn" onclick="askQuestion('Bugungi sotuvlar qancha?')">Bugungi sotuvlar</button>
+        <button class="suggestion-btn" onclick="askQuestion('Top 5 eng ko\'p sotilgan tovarlar')">Top tovarlar</button>
+        <button class="suggestion-btn" onclick="askQuestion('Qarzdorlar haqida ma\'lumot ber')">Qarzdorlar</button>
+        <button class="suggestion-btn" onclick="askQuestion('Skladda kam qolgan tovarlar')">Kam qolgan tovarlar</button>
+        <button class="suggestion-btn" onclick="askQuestion('Shu oy va o\'tgan oyni solishtir')">Oylik solishtirish</button>
+        <button class="suggestion-btn" onclick="askQuestion('Narx o\'zgarishlari')">Narx o'zgarishlari</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="msg ai">
+            <div class="msg-bubble">Assalomu alaykum! Men SKLAD AI yordamchisiman. Sotuvlar, tovarlar va moliyaviy tahlil bo'yicha savollaringizga javob beraman.
+
+O'zbek yoki rus tilida yozishingiz mumkin — ikkalasini ham tushunaman. Nima bilmoqchisiz?</div>
+        </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">AI javob yozmoqda...</div>
+
+    <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Savolingizni yozing..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button id="sendBtn" onclick="sendMessage()">Jo'natish</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var chatHistory = [];
+var messagesDiv = document.getElementById('chatMessages');
+
+function askQuestion(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+function addMessage(role, text) {
+    var div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.innerHTML = '<div class="msg-bubble">' + text.replace(/\n/g, '<br>') + '</div>';
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function sendMessage() {
+    var input = document.getElementById('chatInput');
+    var btn = document.getElementById('sendBtn');
+    var msg = input.value.trim();
+    if (!msg) return;
+
+    addMessage('user', msg);
+    chatHistory.push({ role: 'user', text: msg });
+    input.value = '';
+    btn.disabled = true;
+    document.getElementById('typingIndicator').classList.add('active');
+
+    fetch('/api/ai-chat/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            message: msg,
+            history: chatHistory.slice(-10),
+        }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('typingIndicator').classList.remove('active');
+        btn.disabled = false;
+
+        if (data.ok) {
+            addMessage('ai', data.response);
+            chatHistory.push({ role: 'assistant', text: data.response });
+        } else {
+            addMessage('ai', 'Xatolik: ' + (data.error || 'Noma\'lum xatolik'));
+        }
+
+        input.focus();
+    })
+    .catch(function(err) {
+        document.getElementById('typingIndicator').classList.remove('active');
+        btn.disabled = false;
+        addMessage('ai', 'Server bilan aloqa yo\'q');
+        input.focus();
+    });
+}
+
+function getCookie(name) {
+    var value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return value ? value.pop() : '';
+}
+</script>
+{% endblock %}

@@ -1228,3 +1228,32 @@ def payment_history(request):
         'months_data': months_data,
     }
     return render(request, 'inventory/payment_history.html', context)
+
+
+
+@require_POST
+@login_required(login_url='login')
+def ai_chat_api(request):
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', '').strip()
+        chat_history = data.get('history', [])
+
+        if not message:
+            return JsonResponse({'error': 'Xabar bo\'sh'}, status=400)
+
+        from inventory.services.ai_service import chat_with_ai
+        response = chat_with_ai(message, chat_history)
+
+        return JsonResponse({
+            'ok': True,
+            'response': response,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+@login_required(login_url='login')
+def ai_chat_page(request):
+    return render(request, 'inventory/ai_chat.html')

@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
-
+from inventory.views import ai_chat_api
 from inventory.views import (
     product_price_api, bozor_send_api, download_sale_excel,
     bazar_sell_api, bazar_sale_detail_api, bazar_mark_paid_api,
@@ -23,4 +23,5 @@ urlpatterns = [
     path('', include('inventory.urls')),
     path('api/delete-old-records/', delete_old_records, name='delete_old_records'),
     path('api/product-stats/<int:product_id>/', product_stats_api, name='product_stats'),
+    path('api/ai-chat/', ai_chat_api, name='ai_chat'),
 ]
