@@ -24,6 +24,7 @@ Qoidalar:
 6. Agar savol rus tilida bo'lsa — butun javobni faqat rus tilida yoz
 7. Agar savol o'zbek tilida bo'lsa — butun javobni faqat o'zbek tilida yoz
 7. Agar ma'lumot topilmasa — ochiq ayt
+8. "Quti" so'zini ishlatma, har doim "korobka" deb yoz
 
 Mavjud ma'lumotlar:
 - Sotuvlar (BazarSale) — bozordagi sotuvlar
@@ -32,9 +33,14 @@ Mavjud ma'lumotlar:
 - Qarzdorlar — to'lanmagan sotuvlar
 - Narx tarixi — narx o'zgarishlari
 - 2 ta do'kon: Aziz 3 89 va Siroj 1 84
+- Bashorat — tovar qachon tugashini hisoblash
+- Sekin tovarlar — uzoq vaqt sotilmagan qoldiqlar
+- Oylik trend — oyma-oy statistika
+- Yuborilgan vs sotilgan — bozor samaradorligi
 
-Periods: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), YYYY-MM-DD (masalan 2026-04-01).
+Periods: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), YYYY-MM-DD (masalan 2026-04-01), YYYY-MM-DD_YYYY-MM-DD (oraliq, masalan 2026-04-01_2026-04-09).
 Agar foydalanuvchi "1 aprelda" desa — period='2026-04-01' ishlatilsin.
+Agar foydalanuvchi "1-7 aprelgacha" yoki "1 apreldan 9 aprelgacha" desa — period='2026-04-01_2026-04-09' ishlatilsin.
 Agar foydalanuvchi "barcha vaqt", "за все время" desa — period='barchasi' ishlatilsin."""
 # Tool declarations для Gemini
 TOOL_DECLARATIONS = [
@@ -46,7 +52,7 @@ TOOL_DECLARATIONS = [
                 type=types.Type.OBJECT,
                 properties={
                     'product_name': types.Schema(type=types.Type.STRING, description='Tovar nomi yoki qismi'),
-                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD (masalan 2026-04-01)'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                 },
                 required=['product_name'],
             ),
@@ -58,7 +64,7 @@ TOOL_DECLARATIONS = [
                 type=types.Type.OBJECT,
                 properties={
                     'limit': types.Schema(type=types.Type.INTEGER, description='Nechta tovar ko\'rsatish (default: 10)'),
-                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD (masalan 2026-04-01)'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                     'sort_by': types.Schema(type=types.Type.STRING, description='quantity yoki revenue'),
                 },
             ),
@@ -69,7 +75,7 @@ TOOL_DECLARATIONS = [
             parameters=types.Schema(
                 type=types.Type.OBJECT,
                 properties={
-                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD (masalan 2026-04-01)'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                 },
             ),
         ),
@@ -79,7 +85,7 @@ TOOL_DECLARATIONS = [
             parameters=types.Schema(
                 type=types.Type.OBJECT,
                 properties={
-                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD (masalan 2026-04-01)'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                 },
             ),
         ),
@@ -105,7 +111,7 @@ TOOL_DECLARATIONS = [
             parameters=types.Schema(
                 type=types.Type.OBJECT,
                 properties={
-                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD (masalan 2026-04-01)'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                 },
             ),
         ),
@@ -125,10 +131,88 @@ TOOL_DECLARATIONS = [
             parameters=types.Schema(
                 type=types.Type.OBJECT,
                 properties={
-                    'period1': types.Schema(type=types.Type.STRING, description='Birinchi davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-03), yoki YYYY-MM-DD'),
-                    'period2': types.Schema(type=types.Type.STRING, description='Ikkinchi davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM (masalan 2026-04), yoki YYYY-MM-DD'),
+                    'period1': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
+                    'period2': types.Schema(type=types.Type.STRING, description='Ikkinchi davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
                 },
                 required=['period1', 'period2'],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_product_shipments',
+            description='Muayyan tovar bozorga qancha yuborilganini ko\'rsatadi. Korobka, dona, summa, qaysi do\'konga.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'product_name': types.Schema(type=types.Type.STRING, description='Tovar nomi yoki qismi'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
+                },
+                required=['product_name'],
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_stock_forecast',
+            description='Tovarlar qachon tugashini bashorat qiladi. Oxirgi N kun sotuvlar asosida kunlik tezlikni hisoblab, ombordagi qoldiqni qancha kunlarga yetishini ko\'rsatadi. Tezda tugaydigan tovarlarni aniqlash uchun.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'days_analysis': types.Schema(type=types.Type.INTEGER, description='Tahlil davri (kunlar, default: 30)'),
+                    'limit': types.Schema(type=types.Type.INTEGER, description='Ko\'rsatiladigan tovarlar soni (default: 20)'),
+                },
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_slow_moving_products',
+            description='Sekin sotiladigan tovarlar: omborda bor lekin uzoq vaqtdan beri na sotilmagan, na bozorga yuborilmagan. "Muzlatilgan" kapital, eski qoldiqlar.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'days_threshold': types.Schema(type=types.Type.INTEGER, description='Necha kun sotilmagan bo\'lsa sekin hisoblanadi (default: 30)'),
+                    'limit': types.Schema(type=types.Type.INTEGER, description='Ko\'rsatiladigan tovarlar soni (default: 20)'),
+                },
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_unsold_products',
+            description='Belgilangan davr ichida umuman sotilmagan tovarlar ro\'yxati. Qaysi tovarlar harakat qilmagan.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
+                    'limit': types.Schema(type=types.Type.INTEGER, description='Ko\'rsatiladigan tovarlar soni (default: 30)'),
+                },
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_shipment_vs_sales',
+            description='Bozorga yuborilgan vs bozorda sotilgan taqqoslash. Har bir tovar bo\'yicha samaradorlik (%). Qaysi tovar tez sotiladi, qaysi biri yotib qoladi.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq)'),
+                    'limit': types.Schema(type=types.Type.INTEGER, description='Ko\'rsatiladigan tovarlar soni (default: 20)'),
+                },
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_monthly_trend',
+            description='Oylik sotuv statistikasi va trendlar. Oyma-oy tushum, tranzaksiyalar, o\'sish/pasayish foizi. Mavsumiylikni ko\'rish uchun.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'months': types.Schema(type=types.Type.INTEGER, description='Necha oyni ko\'rsatish (default: 6)'),
+                },
+            ),
+        ),
+        types.FunctionDeclaration(
+            name='get_product_full_stats',
+            description='Tovar haqida TO\'LIQ statistika: ombor, sotuvlar, ketuvlar, narx tarixi, qarzlar, oylik trend, bashorat — hammasi bitta javobda. Foydalanuvchi "to\'liq statistika", "hamma ma\'lumot", "batafsil" desa — shu funksiyani ishlat.',
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    'product_name': types.Schema(type=types.Type.STRING, description='Tovar nomi yoki qismi'),
+                    'period': types.Schema(type=types.Type.STRING, description='Davr: bugun, hafta, oy, yil, oxirgi_30, oxirgi_90, barchasi, YYYY-MM, YYYY-MM-DD, yoki YYYY-MM-DD_YYYY-MM-DD (oraliq). Default: barchasi'),
+                },
+                required=['product_name'],
             ),
         ),
     ]),
