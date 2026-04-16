@@ -76,6 +76,69 @@
         font-weight: 600;
     }
     .btn-minus:hover { background: #c73650; }
+    .btn-minus-mobile { display: none; }
+    .btn-minus-desktop { display: inline; }
+
+    /* FAB (faqat mobil) */
+    .cart-fab {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 500;
+        background: #e94560;
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 14px 22px;
+        font-size: 15px;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        cursor: pointer;
+    }
+    .cart-fab .fab-count {
+        background: #1a1a2e;
+        border-radius: 50%;
+        padding: 1px 6px;
+        font-size: 12px;
+        margin-left: 6px;
+    }
+
+    /* Mobil korzina overlay */
+    .cart-mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 600;
+    }
+    .cart-mobile-overlay.open { display: block; }
+    .cart-mobile-sheet {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .cart-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .cart-mobile-header h3 { color: #1a1a2e; font-size: 16px; }
+    .cart-mobile-close {
+        background: #eee;
+        border: none;
+        border-radius: 50%;
+        width: 30px; height: 30px;
+        font-size: 16px;
+        cursor: pointer;
+        line-height: 30px;
+        text-align: center;
+    }
 
     /* Модальное окно */
     .modal-overlay {
@@ -193,8 +256,31 @@
     }
 
     @media (max-width: 768px) {
-        .bozor-wrap { flex-direction: column; }
-        .bozor-cart { width: 100%; position: static; }
+        /* Desktop korzinani yashirish */
+        .bozor-cart { display: none; }
+        .bozor-wrap { display: block; padding-bottom: 80px; }
+
+        /* Korobka ustunini yashirish */
+        .col-korobka { display: none; }
+
+        .product-list-table th,
+        .product-list-table td { padding: 10px 10px; font-size: 13px; }
+
+        /* Mobilda faqat − belgisi */
+        .btn-minus-desktop { display: none; }
+        .btn-minus-mobile { display: inline; }
+        .btn-minus {
+            padding: 8px 14px;
+            font-size: 18px;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .search-box input { font-size: 16px; }
+        .modal-box { width: 95vw; padding: 18px; }
+
+        /* FAB ko'rsatish */
+        .cart-fab { display: block; }
     }
 </style>
 {% endblock %}
@@ -225,7 +311,7 @@
                     <td>{{ product.stock }} {{ product.unit.short_name }}</td>
                     <td style="font-weight:700; color:#e94560;">{{ product.sell_price|space_number }} so'm</td>
                     <td>
-                        <button class="btn-minus" onclick="openMinus({{ product.id }}, '{{ product.name }}', {{ product.stock }}, {{ product.sell_price }})">−</button>
+                        <button class="btn-minus" onclick="openMinus({{ product.id }}, '{{ product.name }}', {{ product.stock }}, {{ product.sell_price }})"><span class="btn-minus-desktop">−</span><span class="btn-minus-mobile">−</span></button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -260,6 +346,40 @@
             </select>
             <input type="date" id="cartDate">
             <button class="btn-confirm" onclick="confirmCart()">Tasdiqlash</button>
+            <button class="btn-clear" onclick="clearCart()">Tozalash</button>
+        </div>
+    </div>
+</div>
+
+<!-- FAB korzina (mobil) -->
+<button class="cart-fab" id="cartFab" onclick="openMobileCart()">
+    🛒 Korzina <span class="fab-count" id="fabCount" style="display:none;">0</span>
+</button>
+
+<!-- Mobil korzina overlay -->
+<div class="cart-mobile-overlay" id="cartMobileOverlay" onclick="if(event.target===this)closeMobileCart()">
+    <div class="cart-mobile-sheet">
+        <div class="cart-mobile-header">
+            <h3>Bozorga ketish</h3>
+            <button class="cart-mobile-close" onclick="closeMobileCart()">✕</button>
+        </div>
+        <div id="cartContentMobile">
+            <div class="cart-empty" id="cartEmptyMobile">Tovar tanlanmagan</div>
+            <table class="cart-table" id="cartTableMobile" style="display:none;">
+                <thead><tr><th>Tovar</th><th>Soni</th><th>Summa</th><th></th></tr></thead>
+                <tbody id="cartBodyMobile"></tbody>
+            </table>
+        </div>
+        <div class="cart-total">Jami: <span id="cartTotalMobile">0</span> so'm</div>
+        <div class="cart-actions">
+            <select id="cartShopMobile" required>
+                <option value="">Dokonni tanlang...</option>
+                {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" id="cartDateMobile">
+            <button class="btn-confirm" onclick="confirmCartMobile()">Tasdiqlash</button>
             <button class="btn-clear" onclick="clearCart()">Tozalash</button>
         </div>
     </div>
@@ -447,6 +567,104 @@ function getCookie(name) {
     return value ? value.pop() : '';
 }
 
-document.addEventListener('DOMContentLoaded', renderCart);
+document.addEventListener('DOMContentLoaded', function() {
+    renderCart();
+    var today = new Date().toISOString().split('T')[0];
+    var dm = document.getElementById('cartDateMobile');
+    if (dm) dm.value = today;
+});
+
+function openMobileCart() {
+    document.getElementById('cartMobileOverlay').classList.add('open');
+    renderCartMobile();
+}
+function closeMobileCart() {
+    document.getElementById('cartMobileOverlay').classList.remove('open');
+}
+
+function renderCartMobile() {
+    var body = document.getElementById('cartBodyMobile');
+    var table = document.getElementById('cartTableMobile');
+    var empty = document.getElementById('cartEmptyMobile');
+    var totalEl = document.getElementById('cartTotalMobile');
+    var fab = document.getElementById('fabCount');
+
+    if (cart.length > 0) {
+        fab.textContent = cart.length;
+        fab.style.display = 'inline';
+    } else {
+        fab.style.display = 'none';
+    }
+
+    if (cart.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        totalEl.textContent = '0';
+        return;
+    }
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    var html = '';
+    var total = 0;
+    cart.forEach(function(item, i) {
+        var sum = item.qty * item.price;
+        total += sum;
+        var perBox = perBoxData[item.id] || 1;
+        var boxes = Math.floor(item.qty / perBox);
+        html += '<tr><td>' + item.name + '</td>';
+        html += '<td>' + boxes + ' kor. (' + item.qty + ' dona)</td>';
+        html += '<td>' + formatNum(sum) + ' so\'m</td>';
+        html += '<td><button class="cart-remove" onclick="removeFromCart(' + i + ');renderCartMobile();">✕</button></td></tr>';
+    });
+    body.innerHTML = html;
+    totalEl.textContent = formatNum(total);
+}
+
+function confirmCartMobile() {
+    if (cart.length === 0) return alert('Tovar tanlanmagan!');
+    var date = document.getElementById('cartDateMobile').value;
+    if (!date) return alert('Sanani kiriting!');
+    var shopId = document.getElementById('cartShopMobile').value;
+    if (!shopId) return alert('Dokonni tanlang!');
+
+    fetch('/api/bozor-send/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ items: cart, date: date, shop_id: shopId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.ok) {
+            window.open('/api/download-excel/' + resp.sale_id + '/', '_blank');
+            cart = [];
+            localStorage.setItem('bozorCart', JSON.stringify(cart));
+            setTimeout(function() { location.reload(); }, 500);
+        } else {
+            alert(resp.error || 'Xatolik!');
+        }
+    })
+    .catch(function() { alert('Server xatoligi!'); });
+}
+
+// Har bir o'zgartishda FAB ni yangilash
+var _origAddToCart = addToCart;
+addToCart = function() {
+    _origAddToCart();
+    renderCartMobile();
+};
+var _origRemoveFromCart = removeFromCart;
+removeFromCart = function(i) {
+    _origRemoveFromCart(i);
+    renderCartMobile();
+};
+var _origClearCart = clearCart;
+clearCart = function() {
+    _origClearCart();
+    renderCartMobile();
+};
 </script>
 {% endblock %}
