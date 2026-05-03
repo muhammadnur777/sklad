@@ -289,7 +289,7 @@
 </div>
 {% endif %}
 
-
+{% if not price_changed %} <!-- Если не фильтруем по изменению цены, показываем общее количество -->
 <div class="bozor-wrap">
     <div class="bozor-products">
         <div class="search-box">
@@ -418,7 +418,9 @@
         </div>
     </div>
 </div>
+{% endif %} 
 {% endblock %}
+
 
 {% block extra_js %}
 <script>
