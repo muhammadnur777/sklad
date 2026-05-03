@@ -1393,13 +1393,14 @@ def bozor_admin_update(request, shop_id):
             bazar.product.sell_price = value
             bazar.product.save(update_fields=['sell_price'])
 
-            per_box = bazar.product.per_box if bazar.product.per_box > 0 else 1
+        per_box = bazar.product.per_box if bazar.product.per_box and bazar.product.per_box > 0 else 1
+
         return JsonResponse({
             'ok': True,
             'dona': bazar.quantity,
             'korobka': bazar.quantity // per_box,
             'narx': bazar.product.sell_price,
-        })
+})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
     
