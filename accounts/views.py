@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
-
+from decouple import config
 
 def login_view(request):
     error = ''
@@ -19,12 +19,14 @@ def login_view(request):
     return render(request, 'accounts/login.html', {'error': error})
 
 
+
+
 def bozor_login_view(request):
     error = ''
 
     BOZOR_PASSWORDS = {
-        'bozor1': 1,
-        'bozor2': 2,
+        config('BOZOR_1_PASSWORD'): 1,
+        config('BOZOR_2_PASSWORD'): 2,
     }
 
     if request.method == 'POST':

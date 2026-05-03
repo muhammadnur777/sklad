@@ -1,0 +1,226 @@
+{% extends 'base_bozor.html' %}
+{% block extra_css %}
+<style>
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.admin-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #28a745;
+}
+.cat-filter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.cat-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid #28a745;
+    background: #fff;
+    color: #28a745;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.cat-btn.active, .cat-btn:hover {
+    background: #28a745;
+    color: #fff;
+}
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+}
+.admin-table th {
+    background: #28a745;
+    color: #fff;
+    padding: 12px 10px;
+    text-align: left;
+    font-size: 13px;
+}
+.admin-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    vertical-align: middle;
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tr:hover td { background: #f9fff9; }
+.cat-badge {
+    font-size: 11px;
+    color: #888;
+    display: block;
+    margin-top: 2px;
+}
+.edit-input {
+    width: 80px;
+    padding: 5px 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    transition: border 0.2s;
+}
+.edit-input:focus {
+    outline: none;
+    border-color: #28a745;
+}
+.edit-input.saving { border-color: #ffc107; }
+.edit-input.saved { border-color: #28a745; background: #f0fff4; }
+.edit-input.error { border-color: #e94560; }
+.narx-input { width: 110px; }
+@media (max-width: 768px) {
+    .admin-table th, .admin-table td { padding: 8px 6px; font-size: 13px; }
+    .edit-input { width: 65px; }
+    .narx-input { width: 90px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h2>⚙️ Admin — {{ shop.name }}</h2>
+    <span style="color:#888; font-size:13px;">Jami: {{ items|length }} tovar</span>
+</div>
+
+<!-- Kategoriya filter -->
+<div class="cat-filter">
+    <a href="/bozor/{{ shop.id }}/admin/" class="cat-btn {% if not current_category %}active{% endif %}">
+        Barchasi
+    </a>
+    {% for cat in categories %}
+    <a href="/bozor/{{ shop.id }}/admin/?category={{ cat.id }}"
+       class="cat-btn {% if current_category == cat.id|stringformat:'s' %}active{% endif %}">
+        {{ cat.name }}
+    </a>
+    {% endfor %}
+</div>
+
+<table class="admin-table">
+    <thead>
+        <tr>
+            <th>Tovar</th>
+            <th>Korobka</th>
+            <th>Dona</th>
+            <th>Narx (so'm)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>
+                <strong>{{ item.product.name }}</strong>
+                <span class="cat-badge">{{ item.product.category.name|default:'—' }}</span>
+            </td>
+            <td>
+                <input
+                    class="edit-input"
+                    type="number" min="0"
+                    value="{{ item.box_count }}"
+                    data-id="{{ item.id }}"
+                    data-field="korobka"
+                    onchange="saveField(this)"
+                >
+            </td>
+            <td>
+                <input
+                    class="edit-input"
+                    type="number" min="0"
+                    value="{{ item.quantity }}"
+                    data-id="{{ item.id }}"
+                    data-field="dona"
+                    onchange="saveField(this)"
+                >
+            </td>
+            <td>
+                <input
+                    class="edit-input narx-input"
+                    type="number" min="0"
+                    value="{{ item.product.sell_price }}"
+                    data-id="{{ item.id }}"
+                    data-field="narx"
+                    onchange="saveField(this)"
+                >
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" style="text-align:center; padding:30px; color:#888;">
+                Bu kategoriyada tovar yo'q
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function saveField(input) {
+    const id = input.dataset.id;
+    const field = input.dataset.field;
+    const value = input.value;
+
+    input.classList.remove('saved', 'error');
+    input.classList.add('saving');
+
+    fetch('/bozor/{{ shop.id }}/admin/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ id, field, value }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        input.classList.remove('saving');
+        if (data.ok) {
+            input.classList.add('saved');
+            // Если изменили korobka — обновляем dona и наоборот
+            const row = input.closest('tr');
+            if (field === 'korobka') {
+                row.querySelector('[data-field="dona"]').value = data.dona;
+            } else if (field === 'dona') {
+                row.querySelector('[data-field="korobka"]').value = data.korobka;
+            }
+            setTimeout(() => input.classList.remove('saved'), 1500);
+        } else {
+            input.classList.add('error');
+            alert('Xato: ' + (data.error || 'Noma\'lum xato'));
+        }
+    })
+    .catch(() => {
+        input.classList.remove('saving');
+        input.classList.add('error');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        for (let cookie of document.cookie.split(';')) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

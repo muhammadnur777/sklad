@@ -38,7 +38,7 @@ class Sale(models.Model):
 
     class Meta:
         verbose_name = 'Sotuv'
-        verbose_name_plural = 'Sotuvlar'
+        verbose_name_plural = 'bozorga ketuvlar'
         ordering = ['-sale_date', '-created_at']
 
     def __str__(self):
@@ -149,7 +149,7 @@ class StockMovement(models.Model):
 
     @classmethod
     def cleanup_old(cls):
-        cutoff = timezone.now() - relativedelta(months=14)
+        cutoff = timezone.now() - relativedelta(months=16)
         cls.objects.filter(created_at__lt=cutoff).delete()
 
 
@@ -277,3 +277,21 @@ class BozorPayment(models.Model):
 
     def __str__(self):
         return f'{self.amount} so\'m — {self.payment_date}'
+    
+
+class BazarMovement(models.Model):
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, verbose_name='Dokon')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name='Tovar')
+    quantity_before = models.IntegerField('Oldin')
+    quantity_after = models.IntegerField('Keyin')
+    created_at = models.DateTimeField('Sana', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Bozor harakati'
+        verbose_name_plural = 'Bozor harakatlari'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.product.name} | {self.quantity_before} → {self.quantity_after}'
+
+

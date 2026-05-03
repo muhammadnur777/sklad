@@ -73,6 +73,12 @@ DATABASES = {
 
 
 
+BOZOR_PASSWORDS = {
+    config('BOZOR_1_PASSWORD'): 1,
+    config('BOZOR_2_PASSWORD'): 2,
+}
+
+
 AUTH_USER_MODEL = 'accounts.User'
 
 

@@ -113,16 +113,18 @@
 </head>
 <body>
     <nav class="navbar">
-        <h1>{{ shop.name }}</h1>
+        <a href="/bozor/{{ shop.id }}/"><h1>{{ shop.name }}</h1></a>
         <button class="burger" id="burgerBtn" onclick="toggleMenu()">
             <span></span><span></span><span></span>
         </button>
         <div class="nav-links" id="navLinks">
             <a href="/bozor/{{ shop.id }}/">Tovarlar</a>
-            <a href="/bozor/{{ shop.id }}/tovar-qoshish/">+ Qo'shish</a>
+            <!-- <a href="/bozor/{{ shop.id }}/tovar-qoshish/">+ Qo'shish</a> -->
             <a href="/bozor/{{ shop.id }}/sotuvlar/">Sotuvlar</a>
             <a href="/bozor/{{ shop.id }}/qarzdorlar/">Qarzdorlar</a>
+            <a href="/bozor/{{ shop.id }}/admin/">⚙️ Admin</a>
             <a href="/bozor/{{ shop.id }}/xabar/">Xabarlar <span id="bozorNotif" class="badge-notif" style="display:none;"></span></a>
+            <a href="/bozor/{{ shop.id }}/harakatlar/">📋 Harakatlar</a>
             <a href="{% url 'logout' %}">Chiqish</a>
         </div>
     </nav>

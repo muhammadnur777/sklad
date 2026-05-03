@@ -6,6 +6,9 @@ from .models import Sale, SaleItem, Purchase, PurchaseItem, StockMovement
 from inventory.models import Product
 from .models import Sale, SaleItem, Purchase, PurchaseItem, StockMovement, Shop, BazarStock, BazarSale
 from django import forms
+from django.contrib.admin import apps
+
+
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
     list_display = ['name']
@@ -25,22 +28,6 @@ class PurchaseItemInline(admin.TabularInline):
         return False
 
 
-# @admin.register(Purchase)
-# class PurchaseAdmin(admin.ModelAdmin):
-#     list_display = ['__str__', 'total_amount', 'purchase_date']
-#     list_filter = ['purchase_date']
-#     fields = ['purchase_date', 'note', 'total_amount']
-#     readonly_fields = ['purchase_date', 'note', 'total_amount']
-#     inlines = [PurchaseItemInline]
-
-#     def has_add_permission(self, request):
-#         return False
-
-#     def has_change_permission(self, request, obj=None):
-#         return True
-
-#     def has_delete_permission(self, request, obj=None):
-#         return False
 
 
 
@@ -218,3 +205,4 @@ class StockMovementAdmin(admin.ModelAdmin):
             from django.http import HttpResponseRedirect
             return HttpResponseRedirect('verify/')
         return super().changelist_view(request, extra_context)
+    

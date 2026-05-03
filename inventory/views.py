@@ -21,6 +21,10 @@ from finance.models import BazarSale, Shop
 from django.db.models import Sum
 from datetime import date
 from .models import PriceHistory
+from django.db.models import F            # для F('stock')
+from finance.models import Shop, BazarStock  
+from django.db import transaction 
+from finance.models import BazarStock, Shop
 
 @login_required(login_url='login')
 def product_list(request):
@@ -202,70 +206,78 @@ def bozor_send_api(request):
     try:
         data = json.loads(request.body)
         items = data.get('items', [])
-        date = data.get('date')
+        date_str = data.get('date')
         shop_id = data.get('shop_id')
+        
 
         if not items:
-            return JsonResponse({'error': 'Tovar tanlanmagan'}, status=400)
+            return JsonResponse({'error': 'Savat bo\'sh'}, status=400)
+
         if not shop_id:
-            return JsonResponse({'error': 'Dokon tanlanmagan'}, status=400)
+            return JsonResponse({'error': 'Do\'kon tanlanmagan'}, status=400)
 
-        from finance.models import Shop, BazarStock
-
+        
         shop = Shop.objects.get(pk=shop_id)
 
-        sale = Sale.objects.create(
-            user=request.user,
-            status='confirmed',
-            sale_date=date,
-            note=f'Bozorga jo\'natish — {shop.name}',
-        )
-
-        total_amount = 0
-
-        for item in items:
-            product = Product.objects.get(pk=item['id'])
-            qty = int(item['qty'])
-            price = int(item['price'])
-
-            SaleItem.objects.create(
-                sale=sale,
-                product=product,
-                quantity=qty,
-                price=price,
-                total=qty * price,
+        # Всё в одной транзакции
+        with transaction.atomic():
+            sale = Sale.objects.create(
+                user=request.user,
+                
+                total_amount=0,
+                sale_date=date_str,
+                note=f'Bozorga jo\'natish — {shop.name}',
             )
 
-            total_amount += qty * price
+            total = 0
+            for item in items:
+                product = Product.objects.select_for_update().get(pk=item['id'])
+                qty = int(item['qty'])
+                price = product.sell_price
+                item_total = qty * price
 
-            Product.objects.filter(pk=product.id).update(
-                stock=F('stock') - qty
-            )
+                SaleItem.objects.create(
+                    sale=sale,
+                    product=product,
+                    quantity=qty,
+                    price=price,
+                    total=item_total,
+                )
 
-            StockMovement.objects.create(
-                product=product,
-                movement_type='sale',
-                quantity=qty,
-                price=price,
-            )
+                # Уменьшаем склад
+                product.stock = max(0, product.stock - qty)
+                product.save()
 
-            bazar, created = BazarStock.objects.get_or_create(
-                product=product,
-                shop=shop,
-                defaults={'quantity': 0}
-            )
-            bazar.quantity += qty
-            bazar.save()
+                # Добавляем на базар
+                bazar, created = BazarStock.objects.get_or_create(
+                    product=product,
+                    shop=shop,
+                    defaults={'quantity': 0},
+                )
+                bazar.quantity += qty
+                bazar.save()
 
-        sale.total_amount = total_amount
-        sale.total_cost = 0
-        sale.profit = 0
-        sale.save()
+                # Журнал движения
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type='sale',
+                    quantity=qty,
+                    price=price,
+                )
 
-        return JsonResponse({'ok': True, 'sale_id': sale.id})
+                total += item_total
 
+            sale.total_amount = total
+            sale.save()
+
+        return JsonResponse({
+            'ok': True,
+            'sale_id': sale.id,
+            'excel_url': f'/bozorga-ketish/excel/{sale.id}/',
+        })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 
 
@@ -385,16 +397,60 @@ def download_sale_excel(request, sale_id):
 
 @login_required(login_url='login')
 def bozordagi_tovarlar(request, shop_id):
-    from finance.models import BazarStock, Shop
+    
+    from inventory.models import PriceHistory
     shop = Shop.objects.get(pk=shop_id)
-    bazar_items = BazarStock.objects.filter(shop=shop, quantity__gt=0).select_related('product', 'product__category', 'product__unit')
+
+    items = BazarStock.objects.filter(
+        shop=shop
+    ).select_related('product', 'product__category', 'product__unit')
+
+    categories = Category.objects.filter(
+        products__bazar__shop=shop
+    ).distinct()
+
+    category_id = request.GET.get('category')
+    price_changed = request.GET.get('price_changed')
+
+    if category_id:
+        items = items.filter(product__category_id=category_id)
+
+    items = items.order_by('product__category__name', 'product__name')
+
+    # Narx tarixi
+    price_history = None
+    if price_changed:
+        product_ids = items.values_list('product_id', flat=True)
+        price_history = PriceHistory.objects.filter(
+            product_id__in=product_ids
+        ).select_related('product').order_by('-changed_at')[:50]
+
+    changed_product_ids = set(PriceHistory.objects.values_list('product_id', flat=True))
+
+    
+
     context = {
-        'bazar_items': bazar_items,
+        'bazar_items': items,
         'shop': shop,
+        'categories': categories,
+        'current_category': category_id,
+        'price_changed': price_changed,
+        'price_history': price_history,
+        'changed_product_ids': changed_product_ids,
     }
     return render(request, 'inventory/bozordagi_tovarlar.html', context)
 
 
+# @login_required(login_url='login')
+# def bozordagi_tovarlar(request, shop_id):
+#     from finance.models import BazarStock, Shop
+#     shop = Shop.objects.get(pk=shop_id)
+#     bazar_items = BazarStock.objects.filter(shop=shop, quantity__gt=0).select_related('product', 'product__category', 'product__unit')
+#     context = {
+#         'bazar_items': bazar_items,
+#         'shop': shop,
+#     }
+#     return render(request, 'inventory/bozordagi_tovarlar.html', context)
 
 
 @require_POST
@@ -415,51 +471,66 @@ def bazar_sell_api(request):
 
         shop = Shop.objects.get(pk=shop_id) if shop_id else None
 
-        sale = BazarSale.objects.create(
-            user=request.user,
-            client_name=client_name,
-            client_phone=client_phone,
-            payment_status=payment_status,
-            sale_date=date,
-            shop=shop,
-        )
-
-        total_amount = 0
-
-        for item in items:
-            product = Product.objects.get(pk=item['id'])
-            qty = int(item['qty'])
-            price = int(item['price'])
-
-            BazarSaleItem.objects.create(
-                sale=sale,
-                product=product,
-                quantity=qty,
-                price=price,
-                total=qty * price,
+        with transaction.atomic():  # ← 1. транзакция
+            sale = BazarSale.objects.create(
+                user=request.user,
+                client_name=client_name,
+                client_phone=client_phone,
+                payment_status=payment_status,
+                sale_date=date,
+                shop=shop,
             )
 
-            total_amount += qty * price
+            total_amount = 0
 
-            bazar = BazarStock.objects.get(product=product, shop=shop)
-            bazar.quantity -= qty
-            bazar.save()
+            for item in items:
+                product = Product.objects.get(pk=item['id'])
+                qty = int(item['qty'])
+                price = int(item['price'])
 
-            StockMovement.objects.create(
-                product=product,
-                movement_type='sale',
-                quantity=qty,
-                price=price,
-            )
+                BazarSaleItem.objects.create(
+                    sale=sale,
+                    product=product,
+                    quantity=qty,
+                    price=price,
+                    total=qty * price,
+                )
 
-        sale.total_amount = total_amount
-        sale.save()
+                total_amount += qty * price
+
+                # ← 2. get_or_create вместо get
+                bazar, created = BazarStock.objects.get_or_create(
+                    product=product,
+                    shop=shop,
+                    defaults={'quantity': 0}
+                )
+
+                # ← 3. проверка что хватает товара
+                if bazar.quantity < qty:
+                    raise ValueError(f'{product.name} — yetarli tovar yo\'q! ({bazar.quantity} dona bor)')
+
+                bazar.quantity -= qty
+                bazar.save()
+
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type='sale',
+                    quantity=qty,
+                    price=price,
+                )
+
+            sale.total_amount = total_amount
+            sale.save()
 
         return JsonResponse({'ok': True, 'sale_id': sale.id})
 
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-    
+
+
+
 
 
 @login_required(login_url='login')
@@ -653,7 +724,7 @@ def bozorga_ketuvlar(request):
             return redirect('/bozorga-ketuvlar/')
 
     # Автоудаление старых
-    one_year_ago = date.today() - relativedelta(years=1, months=7)
+    one_year_ago = date.today() - relativedelta(years=3, months=9)
     Sale.objects.filter(note__startswith='Bozorga', sale_date__lt=one_year_ago).delete()
 
     date_from = request.GET.get('date_from', '')
@@ -1143,7 +1214,7 @@ def monthly_sales(request):
 
 @login_required(login_url='login')
 def bazar_add_product(request, shop_id):
-    from finance.models import BazarStock, Shop
+    
     shop = Shop.objects.get(pk=shop_id)
     categories = Category.objects.all()
     units = Unit.objects.all()
@@ -1257,3 +1328,94 @@ def ai_chat_api(request):
 @login_required(login_url='login')
 def ai_chat_page(request):
     return render(request, 'inventory/ai_chat.html')
+
+
+
+@login_required(login_url='login')
+def bozor_admin(request, shop_id):
+    shop = Shop.objects.get(pk=shop_id)
+    items = BazarStock.objects.filter(shop=shop).select_related(
+        'product', 'product__category', 'product__unit'
+    ).order_by('product__category__name', 'product__name')
+    
+    categories = Category.objects.all()
+    category_id = request.GET.get('category')
+    if category_id:
+        items = items.filter(product__category_id=category_id)
+
+    context = {
+        'shop': shop,
+        'items': items,
+        'categories': categories,
+        'current_category': category_id,
+    }
+    return render(request, 'inventory/bozor_admin.html', context)
+
+
+@require_POST
+@login_required(login_url='login')
+def bozor_admin_update(request, shop_id):
+    
+    try:
+        data = json.loads(request.body)
+        bazar_id = data.get('id')
+        field = data.get('field')
+        value = int(data.get('value', 0))
+
+        bazar = BazarStock.objects.select_related('product').get(pk=bazar_id)
+
+        if field == 'korobka':
+            per_box = bazar.product.per_box if bazar.product.per_box > 0 else 1
+            qty_before = bazar.quantity
+            bazar.quantity = value * per_box
+            bazar.save()
+            # Harakatni yozish
+            from finance.models import BazarMovement
+            BazarMovement.objects.create(
+            shop=bazar.shop,
+            product=bazar.product,
+            quantity_before=qty_before,
+            quantity_after=bazar.quantity,
+        )
+        elif field == 'dona':
+            qty_before = bazar.quantity
+            bazar.quantity = value
+            bazar.save()
+            # Harakatni yozish
+            from finance.models import BazarMovement
+            BazarMovement.objects.create(
+            shop=bazar.shop,
+            product=bazar.product,
+            quantity_before=qty_before,
+            quantity_after=bazar.quantity,
+        )
+        elif field == 'narx':
+            bazar.product.sell_price = value
+            bazar.product.save(update_fields=['sell_price'])
+
+            per_box = bazar.product.per_box if bazar.product.per_box > 0 else 1
+        return JsonResponse({
+            'ok': True,
+            'dona': bazar.quantity,
+            'korobka': bazar.quantity // per_box,
+            'narx': bazar.product.sell_price,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+
+@login_required(login_url='login')
+def bozor_harakatlar(request, shop_id):
+    from finance.models import BazarMovement, Shop
+    shop = Shop.objects.get(pk=shop_id)
+    movements = BazarMovement.objects.filter(
+        shop=shop
+    ).select_related('product', 'product__category')[:200]
+
+    context = {
+        'shop': shop,
+        'movements': movements,
+    }
+    return render(request, 'inventory/bozor_harakatlar.html', context)
+
+

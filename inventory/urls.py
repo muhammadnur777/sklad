@@ -20,4 +20,7 @@ urlpatterns = [
     path('bozor/<int:shop_id>/tovar-qoshish/', views.bazar_add_product, name='bazar_add_product'),
     path('bozorga-ketuvlar/pullar/', views.payment_history, name='payment_history'),
     path('ai-chat/', views.ai_chat_page, name='ai_chat'),
+    path('bozor/<int:shop_id>/admin/', views.bozor_admin, name='bozor_admin'),
+    path('bozor/<int:shop_id>/admin/update/', views.bozor_admin_update, name='bozor_admin_update'),
+    path('bozor/<int:shop_id>/harakatlar/', views.bozor_harakatlar, name='bozor_harakatlar'),
 ]

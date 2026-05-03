@@ -1,0 +1,42 @@
+{% extends 'base_bozor.html' %}
+{% block content %}
+
+<h2 style="margin-bottom:16px; color:#28a745;">📋 Harakatlar — {{ shop.name }}</h2>
+
+<table style="width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+    <thead>
+        <tr style="background:#28a745; color:#fff;">
+            <th style="padding:12px 10px; text-align:left;">Sana</th>
+            <th style="padding:12px 10px; text-align:left;">Tovar</th>
+            <th style="padding:12px 10px; text-align:center;">Oldin</th>
+            <th style="padding:12px 10px; text-align:center;">Keyin</th>
+            <th style="padding:12px 10px; text-align:center;">Farq</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in movements %}
+        <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:10px; font-size:13px; color:#888;">{{ m.created_at|date:"d.m.Y H:i" }}</td>
+            <td style="padding:10px;">
+                <strong>{{ m.product.name }}</strong>
+                <span style="font-size:12px; color:#888; display:block;">{{ m.product.category.name|default:'—' }}</span>
+            </td>
+            <td style="padding:10px; text-align:center;">{{ m.quantity_before }} dona</td>
+            <td style="padding:10px; text-align:center; font-weight:700;">{{ m.quantity_after }} dona</td>
+            <td style="padding:10px; text-align:center;">
+                {% if m.quantity_after > m.quantity_before %}
+                    <span style="color:#28a745; font-weight:700;">+{{ m.quantity_after|add:"-"|add:m.quantity_before }}</span>
+                {% else %}
+                    <span style="color:#e94560; font-weight:700;">{{ m.quantity_after|add:"-"|add:m.quantity_before }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" style="text-align:center; padding:30px; color:#888;">Hali harakat yo'q</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
