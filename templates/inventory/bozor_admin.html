@@ -109,6 +109,13 @@
     {% endfor %}
 </div>
 
+<!-- Tovar qidirish -->
+<div style="margin-bottom:16px;">
+    <input type="text" id="searchInput" placeholder="Tovar qidirish..." 
+           oninput="filterProducts()"
+           style="width:100%; padding:10px 14px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+</div>
+
 <table class="admin-table">
     <thead>
         <tr>
@@ -206,6 +213,17 @@ function saveField(input) {
     .catch(() => {
         input.classList.remove('saving');
         input.classList.add('error');
+    });
+}
+
+
+function filterProducts() {
+    var query = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.admin-table tbody tr').forEach(function(row) {
+        var name = row.querySelector('strong');
+        if (name) {
+            row.style.display = name.textContent.toLowerCase().includes(query) ? '' : 'none';
+        }
     });
 }
 
