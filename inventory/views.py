@@ -715,11 +715,22 @@ def bozorga_ketuvlar(request):
         pay_amount = int(request.POST.get('payment_amount', 0) or 0)
         pay_date = request.POST.get('payment_date', str(date.today()))
         pay_note = request.POST.get('payment_note', '')
+        pay_shop_id = request.POST.get('payment_shop', '')
+        pay_category = request.POST.get('payment_category', '')
         if pay_amount > 0:
+            from finance.models import Shop
+            shop_obj = None
+            if pay_shop_id:
+                try:
+                    shop_obj = Shop.objects.get(pk=pay_shop_id)
+                except Shop.DoesNotExist:
+                    pass
             BozorPayment.objects.create(
                 amount=pay_amount,
                 payment_date=pay_date,
                 note=pay_note,
+                shop=shop_obj,
+                category=pay_category or None,
             )
             return redirect('/bozorga-ketuvlar/')
 
@@ -1253,11 +1264,9 @@ def bazar_add_product(request, shop_id):
     }
     return render(request, 'inventory/bazar_add_product.html', context)
 
-
-
 @login_required(login_url='login')
 def payment_history(request):
-    from finance.models import BozorPayment
+    from finance.models import BozorPayment, Shop
     from django.db.models import Sum
     from datetime import date
 
@@ -1272,6 +1281,8 @@ def payment_history(request):
     start_month = 4
     total_months = (today.year - start_year) * 12 + (today.month - start_month) + 1
 
+    shops = Shop.objects.all()
+
     months_data = []
     for i in range(total_months):
         m = start_month + i
@@ -1282,24 +1293,75 @@ def payment_history(request):
 
         payments = BozorPayment.objects.filter(
             payment_date__year=y, payment_date__month=m
-        )
+        ).select_related('shop')
+
         month_total = payments.aggregate(total=Sum('amount'))['total'] or 0
+
+        shops_data = []
+        for shop in shops:
+            shop_payments = payments.filter(shop=shop)
+            if not shop_payments.exists():
+                continue
+            shop_total = shop_payments.aggregate(total=Sum('amount'))['total'] or 0
+
+            # Xitoy va Seh bo'yicha
+            xitoy_payments = shop_payments.filter(category='xitoy')
+            seh_payments = shop_payments.filter(category='seh')
+            other_payments = shop_payments.filter(category__isnull=True)
+
+            categories = []
+            if xitoy_payments.exists():
+                categories.append({
+                    'label': 'Xitoy',
+                    'color': '#e74c3c',
+                    'total': xitoy_payments.aggregate(t=Sum('amount'))['t'] or 0,
+                    'payments': xitoy_payments,
+                })
+            if seh_payments.exists():
+                categories.append({
+                    'label': 'Seh',
+                    'color': '#8e44ad',
+                    'total': seh_payments.aggregate(t=Sum('amount'))['t'] or 0,
+                    'payments': seh_payments,
+                })
+            if other_payments.exists():
+                categories.append({
+                    'label': '📦 Boshqa',
+                    'color': '#95a5a6',
+                    'total': other_payments.aggregate(t=Sum('amount'))['t'] or 0,
+                    'payments': other_payments,
+                })
+
+            shops_data.append({
+                'shop': shop,
+                'total': shop_total,
+                'categories': categories,
+            })
+
+        # Magazinsiz to'lovlar
+        no_shop = payments.filter(shop__isnull=True)
+        if no_shop.exists():
+            shops_data.append({
+                'shop': None,
+                'total': no_shop.aggregate(t=Sum('amount'))['t'] or 0,
+                'categories': [{
+                    'label': '📦 Boshqa',
+                    'color': '#95a5a6',
+                    'total': no_shop.aggregate(t=Sum('amount'))['t'] or 0,
+                    'payments': no_shop,
+                }],
+            })
 
         months_data.append({
             'month': month_names[m],
             'year': y,
             'total': month_total,
-            'payments': payments,
+            'shops_data': shops_data,
             'is_current': (y == today.year and m == today.month),
         })
 
     months_data.reverse()
-
-    context = {
-        'months_data': months_data,
-    }
-    return render(request, 'inventory/payment_history.html', context)
-
+    return render(request, 'inventory/payment_history.html', {'months_data': months_data})
 
 
 @require_POST

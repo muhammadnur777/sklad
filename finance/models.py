@@ -264,7 +264,20 @@ class Message(models.Model):
         return f'{self.get_direction_display()} — {self.text[:30]}'
 
 
+
 class BozorPayment(models.Model):
+    CATEGORY_CHOICES = [
+        ('xitoy', 'Xitoy'),
+        ('seh', 'Seh'),
+    ]
+    shop = models.ForeignKey(
+        'Shop', on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='Dokon'
+    )
+    category = models.CharField(
+        'Kategoriya', max_length=10,
+        choices=CATEGORY_CHOICES, null=True, blank=True
+    )
     amount = models.IntegerField('Summa')
     payment_date = models.DateField('Sana')
     note = models.TextField('Izoh', blank=True)
@@ -274,9 +287,6 @@ class BozorPayment(models.Model):
         verbose_name = 'Bozordan pul'
         verbose_name_plural = 'Bozordan pullar'
         ordering = ['-payment_date', '-created_at']
-
-    def __str__(self):
-        return f'{self.amount} so\'m — {self.payment_date}'
     
 
 class BazarMovement(models.Model):

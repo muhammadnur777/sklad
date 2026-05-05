@@ -102,6 +102,23 @@
         <form method="post">
             {% csrf_token %}
             <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#888;">Dokon</label>
+                <select name="payment_shop" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
+                    <option value="">Dokonni tanlang...</option>
+                    {% for sh in all_shops %}
+                    <option value="{{ sh.id }}">{{ sh.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#888;">Kategoriya</label>
+                <select name="payment_category" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
+                    <option value="">Tanlang...</option>
+                    <option value="xitoy">Xitoy</option>
+                    <option value="seh">Seh</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
                 <label style="font-size:12px; color:#888;">Summa (so'm)</label>
                 <input type="number" name="payment_amount" required style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:16px; text-align:center;" oninput="showPayFormat(this)">
                 <div id="payFormatDisplay" style="color:#888; font-size:13px; margin-top:4px;"></div>
@@ -111,7 +128,7 @@
                 <input type="date" name="payment_date" value="" id="paymentDate" required style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px; color:#888;">Izoh (yozsa bo'ladi)</label>
+                <label style="font-size:12px; color:#888;">Izoh (yozmasa bo'ladi)</label>
                 <input type="text" name="payment_note" placeholder="Izoh..." style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px;">
             </div>
             <div style="display:flex; gap:8px;">
@@ -121,7 +138,6 @@
         </form>
     </div>
 </div>
-
 {% endblock %}
 
 {% block content %}

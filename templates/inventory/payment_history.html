@@ -29,37 +29,87 @@
     .pay-amount { font-size: 14px; font-weight: 600; color: #0d6efd; }
     .pay-note { font-size: 12px; color: #aaa; margin-left: 8px; }
     .no-data { text-align: center; padding: 40px; color: #ccc; font-size: 16px; }
+    .shop-group {
+    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    }
+    .shop-group-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 13px;
+    color: #495057;
+}
+.shop-name { color: #0d6efd; }
+.shop-total { color: #198754; }
 </style>
 {% endblock %}
+
 
 {% block content %}
 <a href="/bozorga-ketuvlar/" class="back-link">← Ketuvlar</a>
 <h2 class="page-title">Berilgan pullar tarixi</h2>
 
 {% for month in months_data %}
-<div class="month-card {% if month.is_current %}current{% endif %} {% if month.total == 0 %}zero{% endif %}" onclick="this.querySelector('.month-details').classList.toggle('active')">
+<div class="month-card {% if month.is_current %}current{% endif %} {% if month.total == 0 %}zero{% endif %}"
+     onclick="this.querySelector('.month-details').classList.toggle('active')">
+
     <div class="month-header">
         <span class="month-name">
             {{ month.month }} {{ month.year }}
-            {% if month.is_current %}<span style="font-size:11px; color:#0d6efd; margin-left:6px;">shu oy</span>{% endif %}
+            {% if month.is_current %}
+                <span style="font-size:11px; color:#0d6efd; margin-left:6px;">shu oy</span>
+            {% endif %}
         </span>
         <span class="month-total">{{ month.total|space_number }} so'm</span>
     </div>
+
     <div class="month-details">
-        {% if month.payments %}
-            {% for pay in month.payments %}
-            <div class="pay-row">
-                <div>
-                    <span class="pay-date">{{ pay.payment_date }}</span>
-                    {% if pay.note %}<span class="pay-note">— {{ pay.note }}</span>{% endif %}
+        {% if month.shops_data %}
+            {% for group in month.shops_data %}
+            <div style="margin-bottom:12px; border:1px solid #dee2e6; border-radius:10px; overflow:hidden;">
+
+                <!-- Dokon header -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#e8f0fe;">
+                    <span style="font-weight:700; font-size:14px; color:#0d6efd;">
+                        🏪 {{ group.shop.name|default:"Dokon ko'rsatilmagan" }}
+                    </span>
+                    <span style="font-weight:700; font-size:14px; color:#0d6efd;">
+                        {{ group.total|space_number }} so'm
+                    </span>
                 </div>
-                <span class="pay-amount">{{ pay.amount|space_number }} so'm</span>
+
+                <!-- Kategoriyalar -->
+                {% for cat in group.categories %}
+                <div style="border-top:1px solid #f0f0f0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 14px 7px 24px; background:#fafafa;">
+                        <span style="font-size:13px; font-weight:600; color:{{ cat.color }};">{{ cat.label }}</span>
+                        <span style="font-size:13px; font-weight:600; color:{{ cat.color }};">{{ cat.total|space_number }} so'm</span>
+                    </div>
+                    {% for pay in cat.payments %}
+                    <div class="pay-row" style="padding-left:32px;">
+                        <div>
+                            <span class="pay-date">{{ pay.payment_date }}</span>
+                            {% if pay.note %}<span class="pay-note">— {{ pay.note }}</span>{% endif %}
+                        </div>
+                        <span class="pay-amount">{{ pay.amount|space_number }} so'm</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
             </div>
             {% endfor %}
         {% else %}
             <div style="text-align:center; color:#ccc; padding:12px;">Pul kiritilmagan</div>
         {% endif %}
     </div>
+
 </div>
 {% endfor %}
+
 {% endblock %}
