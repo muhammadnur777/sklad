@@ -98,6 +98,114 @@ tr:hover td input { background: transparent; }
 
 .col-xitoy { background: #fff5f5; }
 .col-seh { background: #f8f5ff; }
+
+/* Полоска магазина */
+.shop-title-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: #1a1a2e;
+    border-radius: 10px 10px 0 0;
+    flex-wrap: wrap;
+}
+
+.sname {
+    font-weight: 700;
+    font-size: 17px;
+    color: #fff;
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.shop-totals-scroll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex: 1;
+    min-width: 0;
+}
+.shop-totals-scroll::-webkit-scrollbar { display: none; }
+
+
+.totals-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.group-label {
+    font-size: 13px;
+    color: #aaa;
+    white-space: nowrap;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.totals-sep {
+    color: #444;
+    font-size: 22px;
+    flex-shrink: 0;
+    padding: 0 6px;
+}
+
+/* ===== ДЕСКТОП — крупные чипы ===== */
+.stat-chip {
+    white-space: nowrap;
+    font-size: 15px;        /* было 13px */
+    padding: 7px 14px;      /* было 4px 10px */
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.stat-chip b {
+    font-size: 16px;        /* число чуть крупнее текста */
+}
+
+/* Berilgan pul */
+.chip-xitoy     { background: rgba(192,57,43,0.2);   color: #e74c3c; }
+.chip-seh       { background: rgba(108,52,131,0.2);  color: #9b59b6; }
+.chip-jami      { background: rgba(13,110,253,0.15); color: #4d9eff; }
+
+/* Ketuvlar */
+.chip-ket-xitoy { background: rgba(192,57,43,0.10);  color: #c0392b; border: 1px solid rgba(192,57,43,0.35); }
+.chip-ket-seh   { background: rgba(108,52,131,0.10); color: #8e44ad; border: 1px solid rgba(108,52,131,0.35); }
+.chip-ket-jami  { background: rgba(39,174,96,0.15);  color: #2ecc71; border: 1px solid rgba(39,174,96,0.35); }
+
+/* ===== МОБИЛА — компактные ===== */
+@media (max-width: 600px) {
+    .shop-title-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    /* Ключевое — ширина должна быть строго ограничена */
+    .shop-totals-scroll {
+        width: 100%;
+        max-width: 100%;
+        flex: none;
+        padding-bottom: 4px; /* место для скролла */
+    }
+
+    .stat-chip {
+        font-size: 12px;
+        padding: 4px 9px;
+        flex-shrink: 0; /* чипы не сжимаются — вот почему скролл работает */
+    }
+    .stat-chip b {
+        font-size: 13px;
+    }
+    .group-label {
+        font-size: 11px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -114,17 +222,46 @@ tr:hover td input { background: transparent; }
             {% endfor %}
         </select>
         <!-- Общий итог -->
-        <div class="ph-grand" id="global-grand-total">Jami: 0 so'm</div>
+        <div class="ph-grand" id="global-grand-total">Jami 2 dokon: 0 so'm</div>
     </div>
 
     {% for sg in shops_data %}
     <div class="shop-block">
         <div class="shop-title-bar">
             <span class="sname">🏪 {{ sg.shop.name }}</span>
-            <div class="shop-totals">
-                <span class="x-tot" id="xtot-{{ sg.shop.id }}">Xitoy: 0</span>
-                <span class="s-tot" id="stot-{{ sg.shop.id }}">🏭 Seh: 0</span>
-                <span class="all-tot shop-grand-total" id="atot-{{ sg.shop.id }}" data-val="0">jami 0</span>
+            <div class="shop-totals-scroll">
+
+                <!-- === KETUVLAR (слева) === -->
+                <div class="totals-group ketuvlar-group">
+                    <span class="group-label">📦 Ketuvlar:</span>
+                    <span class="stat-chip chip-ket-xitoy">
+                        Xitoy: <b>{{ sg.ket_xitoy }}</b>
+                    </span>
+                    <span class="stat-chip chip-ket-seh">
+                        Seh: <b>{{ sg.ket_seh }}</b>
+                    </span>
+                    <span class="stat-chip chip-ket-jami">
+                        jami <b>{{ sg.ket_total }}</b>
+                    </span>
+                </div>
+
+                <div class="totals-sep">|</div>
+
+                <!-- === BERILGAN PUL (справа) === -->
+                <div class="totals-group berilgan-group">
+                    <span class="group-label">💸 Berilgan:</span>
+                    <span class="stat-chip chip-xitoy" id="xtot-{{ sg.shop.id }}">
+                        🇨🇳 Xitoy: <b>0</b>
+                    </span>
+                    <span class="stat-chip chip-seh" id="stot-{{ sg.shop.id }}">
+                        🏭 Seh: <b>0</b>
+                    </span>
+                    <span class="stat-chip chip-jami shop-grand-total"
+                          id="atot-{{ sg.shop.id }}" data-val="0">
+                        jami <b>0</b>
+                    </span>
+                </div>
+
             </div>
         </div>
 
@@ -336,14 +473,10 @@ tr:hover td input { background: transparent; }
                 wrap.querySelectorAll('tr[data-day]').forEach(row => {
                     const xInp = row.querySelector('input[data-cat="xitoy"][data-field="amount"]');
                     const sInp = row.querySelector('input[data-cat="seh"][data-field="amount"]');
-                    
-                    // getCleanNum сам уберет пробелы и превратит в число
                     const xVal = getCleanNum(xInp?.value);
                     const sVal = getCleanNum(sInp?.value);
-                    
                     xTotal += xVal;
                     sTotal += sVal;
-                    
                     const jamiCell = row.querySelector('.day-jami');
                     if (jamiCell) {
                         const t = xVal + sVal;
@@ -352,21 +485,19 @@ tr:hover td input { background: transparent; }
                 });
 
                 const all = xTotal + sTotal;
-                
-                // Обновляем футер таблицы
+
                 document.getElementById('xs-' + shopId).textContent = xTotal.toLocaleString('ru-RU');
                 document.getElementById('ss-' + shopId).textContent = sTotal.toLocaleString('ru-RU');
                 document.getElementById('as-' + shopId).textContent = all.toLocaleString('ru-RU');
 
-                // Обновляем шапку магазина
-                document.getElementById('xtot-' + shopId).textContent = '🇨🇳 Xitoy: ' + xTotal.toLocaleString('ru-RU');
-                document.getElementById('stot-' + shopId).textContent = '🏭 Seh: '   + sTotal.toLocaleString('ru-RU');
-                
+    // ↓↓↓ ВОТ ЗДЕСЬ МЕНЯЙ ТЕКСТ НА СВОЙ ↓↓↓
+                document.getElementById('xtot-' + shopId).textContent = 'Xitoy: ' + xTotal.toLocaleString('ru-RU');
+                document.getElementById('stot-' + shopId).textContent = 'Seh: ' + sTotal.toLocaleString('ru-RU');
+    
                 const shopAtot = document.getElementById('atot-' + shopId);
-                shopAtot.textContent = 'jami ' + all.toLocaleString('ru-RU');
-                shopAtot.dataset.val = all; // Сохраняем математическое значение
+                shopAtot.textContent = 'jami: ' + all.toLocaleString('ru-RU');  // ← твой текст
+                shopAtot.dataset.val = all;
 
-                // Пересчитываем самый главный итог на странице
                 updateGlobalGrandTotal();
             }
 
@@ -377,7 +508,7 @@ tr:hover td input { background: transparent; }
                 });
                 const globalEl = document.getElementById('global-grand-total');
                 if (globalEl) {
-                    globalEl.textContent = 'Jami: ' + grand.toLocaleString('ru-RU') + " so'm";
+                    globalEl.textContent = 'Jami 2 dokon: ' + grand.toLocaleString('ru-RU') + " so'm";
                 }
             }
 

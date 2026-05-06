@@ -1308,6 +1308,7 @@ def payment_history(request):
             return JsonResponse({'ok': False, 'error': str(e)})
 
     # --- GET запрос (Отрисовка) ---
+# --- GET запрос (Отрисовка) ---
     sel_month = request.GET.get('month', f'{today.year}-{today.month:02d}')
     year, month = map(int, sel_month.split('-'))
     days_in_month = calendar.monthrange(year, month)[1]
@@ -1317,9 +1318,8 @@ def payment_history(request):
         7:'Iyul',8:'Avgust',9:'Sentabr',10:'Oktabr',11:'Noyabr',12:'Dekabr'
     }
 
-    shops = Shop.objects.all()
-    
-    # Забираем все платежи за месяц разом (превращаем в list, чтобы не дергать БД дальше)
+    shops = list(Shop.objects.all())  # list() чтобы не дергать БД в циклах
+
     payments = list(BozorPayment.objects.filter(
         payment_date__year=year, payment_date__month=month
     ).select_related('shop'))
@@ -1331,34 +1331,76 @@ def payment_history(request):
             for d in range(1, days_in_month + 1)
         } for shop in shops
     }
-
     for pay in payments:
         sid = pay.shop_id
         cat = pay.category or 'xitoy'
         d   = pay.payment_date.day
         if sid in cell_data and d in cell_data[sid]:
-            # ИСПРАВЛЕНИЕ 3: Сразу форматируем число с пробелами (10000 -> "10 000")
             fmt_amount = f"{pay.amount:,}".replace(",", " ") if pay.amount else ''
             cell_data[sid][d][cat] = {'amount': fmt_amount, 'note': pay.note or ''}
 
+    # --- Ketuvlar за выбранный месяц ---
+    # ИСПРАВЛЕНИЕ: добавляем Sale в импорт!
+    from finance.models import Sale as SaleModel
+
+    XITOY_CATEGORIES = ['Detskiy', 'Hoz tovar']
+
+    all_ketuvlar = list(
+        SaleModel.objects.filter(
+            note__startswith='Bozorga',
+            sale_date__year=year,
+            sale_date__month=month,
+        ).prefetch_related('items__product__category')
+    )
+
+    # Строим словарь имён магазинов для быстрого поиска
+    # Сортируем по длине имени (длинное имя проверяем первым — избегаем "Siroj" != "Siroj 1 84")
+    shops_sorted = sorted(shops, key=lambda s: len(s.name), reverse=True)
+
+    ketuvlar_map = {shop.id: {'xitoy': 0, 'seh': 0} for shop in shops}
+
+    for sale in all_ketuvlar:
+        note = sale.note or ''
+        matched_shop = None
+        for shop in shops_sorted:
+            if shop.name in note:
+                matched_shop = shop
+                break  # берём первый (самый длинный) совпадающий
+
+        if not matched_shop:
+            continue  # продажа не привязана ни к одному магазину — пропускаем
+
+        for item in sale.items.all():  # prefetch_related уже загружен — без доп. запросов
+            cat_name = item.product.category.name if item.product.category else ''
+            if cat_name in XITOY_CATEGORIES:
+                ketuvlar_map[matched_shop.id]['xitoy'] += item.total
+            else:
+                ketuvlar_map[matched_shop.id]['seh'] += item.total
+
+    # --- shops_data ---
     shops_data = []
     grand_total = 0
 
     for shop in shops:
-        # ИСПРАВЛЕНИЕ 4: Избавляемся от N+1 запросов.
-        # Раньше вы делали .aggregate() внутри цикла, что делало по 2 запроса в БД на каждый магазин.
-        # Теперь мы считаем это в памяти Python (работает в 10 раз быстрее).
         xitoy_total = sum(p.amount for p in payments if p.shop_id == shop.id and p.category == 'xitoy')
         seh_total   = sum(p.amount for p in payments if p.shop_id == shop.id and p.category == 'seh')
         shop_total  = xitoy_total + seh_total
         grand_total += shop_total
 
+        k = ketuvlar_map.get(shop.id, {'xitoy': 0, 'seh': 0})
+        ket_xitoy = k['xitoy']
+        ket_seh   = k['seh']
+        ket_total = ket_xitoy + ket_seh
+
         shops_data.append({
-            'shop': shop,
+            'shop':        shop,
             'xitoy_total': f"{xitoy_total:,}".replace(",", " "),
-            'seh_total': f"{seh_total:,}".replace(",", " "),
-            'total': f"{shop_total:,}".replace(",", " "),
-            'cell_data': cell_data.get(shop.id, {}),
+            'seh_total':   f"{seh_total:,}".replace(",", " "),
+            'total':       f"{shop_total:,}".replace(",", " "),
+            'cell_data':   cell_data.get(shop.id, {}),
+            'ket_xitoy':   f"{ket_xitoy:,}".replace(",", " "),
+            'ket_seh':     f"{ket_seh:,}".replace(",", " "),
+            'ket_total':   f"{ket_total:,}".replace(",", " "),
         })
 
     # Список месяцев
