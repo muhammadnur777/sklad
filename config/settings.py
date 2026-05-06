@@ -20,7 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-
+    'django.contrib.humanize', # https://django-humaze.readthedocs.io/en/latest/
     'accounts',
     'inventory',
     'finance',
