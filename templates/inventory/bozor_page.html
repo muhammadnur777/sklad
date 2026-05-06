@@ -254,6 +254,53 @@
         font-size: 14px;
         padding: 30px 0;
     }
+    /* Одна кнопка скролла */
+    .scroll-single {
+        position: fixed;
+        right: 20px;
+        left: auto;
+        bottom: 90px;
+        z-index: 700;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 22px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scroll-single:hover {
+        background: #e94560;
+        transform: translateY(-2px);
+    }
+
+    .scroll-single:active {
+        transform: scale(0.95);
+    }
+
+    .scroll-single.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+    .scroll-single {
+        right: 16px;
+        left: auto;
+        bottom: 90px;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        }
+    }
 
     @media (max-width: 768px) {
         /* Desktop korzinani yashirish */
@@ -385,6 +432,8 @@
     </div>
 </div>
 
+
+
 <!-- Модальное окно -->
 <div class="modal-overlay" id="minusModal">
     <div class="modal-box">
@@ -409,6 +458,8 @@
         </div>
     </div>
 </div>
+
+<button id="scrollBtn" class="scroll-single" onclick="handleScrollBtn()">↓</button>
 {% endblock %}
 
 {% block extra_js %}
@@ -666,5 +717,32 @@ clearCart = function() {
     _origClearCart();
     renderCartMobile();
 };
+
+function handleScrollBtn() {
+    if (window.scrollY < window.innerHeight / 2) {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    } else {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var scrollBtn = document.getElementById('scrollBtn');
+    if (!scrollBtn) return;
+
+    function updateScrollBtn() {
+        scrollBtn.textContent = window.scrollY > window.innerHeight / 2 ? '↑' : '↓';
+    }
+
+    updateScrollBtn();
+    window.addEventListener('scroll', updateScrollBtn);
+});
+
 </script>
 {% endblock %}
