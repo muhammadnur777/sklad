@@ -162,7 +162,11 @@
         <div class="stat-label">Berilgan pul (bugun)</div>
         <div class="stat-value" style="color:#0d6efd;">{{ payment_today|space_number }} so'm</div>
         <div style="font-size:12px; color:#888; margin-top:4px;">Shu oy: {{ payment_month|space_number }} so'm</div>
-        <a href="/bozorga-ketuvlar/pullar/" style="font-size:12px; color:#0d6efd; margin-top:4px; display:block;">Batafsil →</a>
+        <a href="/bozorga-ketuvlar/pullar/" 
+   onclick="event.stopPropagation();"
+   style="font-size:12px; color:#0d6efd; margin-top:4px; display:block;">
+   Batafsil →
+</a>
     </div>
 </div>
 
