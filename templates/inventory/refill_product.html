@@ -83,6 +83,22 @@
 
 {% block content %}
 <div class="form-card">
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+        ">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
     <h2>Tovarni to'ldirish</h2>
     <form method="post">
         {% csrf_token %}

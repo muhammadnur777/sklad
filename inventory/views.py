@@ -23,6 +23,7 @@ from django.db.models import F            # для F('stock')
 from finance.models import Shop, BazarStock  
 from django.db import transaction 
 from finance.models import BazarStock, Shop
+from django.contrib import messages
 
 @login_required(login_url='login')
 def product_list(request):
@@ -120,7 +121,9 @@ def add_product(request):
             price=sell_price,
         )
 
-        return redirect('inventory:product_list')
+        # return redirect('inventory:product_list')
+        messages.success(request, f"✅ {name} — muvaffaqiyatli qo'shildi!")
+        return redirect(request.path)
 
     context = {
         'categories': categories,
@@ -168,7 +171,12 @@ def refill_product(request):
             price=product.sell_price,
         )
 
-        return redirect('inventory:product_list')
+        # return redirect('inventory:product_list')
+        # Было: return redirect('inventory:product_list')
+        # Стало:
+        
+        messages.success(request, f"✅ {product.name} — {quantity} dona muvaffaqiyatli qo'shildi!")
+        return redirect(request.path)  
 
     context = {
         'products': products,
