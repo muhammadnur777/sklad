@@ -124,6 +124,17 @@
     .no-sales {
         text-align: center; padding: 60px; color: #999; font-size: 18px;
     }
+    @media (max-width: 600px) {
+    .sale-items th { font-size: 10px !important; padding: 3px 4px !important; }
+    .sale-items td { font-size: 11px !important; padding: 4px 4px !important; }
+    .item-total { font-size: 11px !important; }
+    .stat-card .stat-value { font-size: 15px !important; }
+    .stat-card .stat-label { font-size: 11px !important; }
+    .sale-date { font-size: 11px !important; }
+    .sale-client { font-size: 12px !important; }
+    .sale-card { padding: 12px 14px !important; }
+    .stat-card { padding: 12px 16px !important; }
+    }
 </style>
 {% endblock %}
 
@@ -179,6 +190,7 @@
                     <span style="font-size:12px; color:#888;"> ({{ sale.client_phone }})</span>
                 {% endif %}
             </div>
+            
             <span class="sale-status {% if sale.payment_status == 'paid' %}status-paid{% else %}status-debt{% endif %}">
                 {% if sale.payment_status == 'paid' %}To'langan{% else %}Qarz{% endif %}
             </span>
@@ -186,6 +198,12 @@
         <div class="sale-items">
             <table>
                 <thead>
+
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding: 8px; font-weight:700; color:#1a1a2e; font-size:15px; border-bottom: 2px solid #eee;">
+                            Umumiy summa: {{ sale.total_amount|space_number }} so'm
+                        </td>
+                    </tr>
                     <tr>
                         <th>Tovar</th>
                         <th>Soni</th>
