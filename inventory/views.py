@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.http import JsonResponse
-from .models import Product, Category, Unit
+from .models import Product, Category, Unit, QogozRecord
 from finance.models import Purchase, PurchaseItem, StockMovement
 import json
 from django.views.decorators.http import require_POST
@@ -24,7 +24,7 @@ from finance.models import Shop, BazarStock
 from django.db import transaction 
 from finance.models import BazarStock, Shop
 from django.contrib import messages
-
+import math
 @login_required(login_url='login')
 def product_list(request):
     from .models import PriceHistory
@@ -252,6 +252,22 @@ def bozor_send_api(request):
 
                 # Уменьшаем склад
                 product.stock = max(0, product.stock - qty)
+
+                # ===== QOG'OZ ВЫЧИТАНИЕ =====
+                if product.qogoz_stock > 0:
+                    # 72 штук × 2 qogoz/dona = 144 qogoz уходит
+                    qogoz_needed = qty * product.qogoz_per_unit
+                    subtract = min(qogoz_needed, product.qogoz_stock)
+                    product.qogoz_stock -= subtract
+                    QogozRecord.objects.create(
+                        product=product,
+                        quantity=subtract,
+                        record_type='out',
+                        date=date_str,
+                        note=f"Bozorga ketish — {shop.name} ({qty} dona × {product.qogoz_per_unit} = {subtract} qog'oz)",
+                    )
+                # ================================
+
                 product.save()
 
                 # Добавляем на базар
@@ -283,7 +299,6 @@ def bozor_send_api(request):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 
 
@@ -447,16 +462,6 @@ def bozordagi_tovarlar(request, shop_id):
     return render(request, 'inventory/bozordagi_tovarlar.html', context)
 
 
-# @login_required(login_url='login')
-# def bozordagi_tovarlar(request, shop_id):
-#     from finance.models import BazarStock, Shop
-#     shop = Shop.objects.get(pk=shop_id)
-#     bazar_items = BazarStock.objects.filter(shop=shop, quantity__gt=0).select_related('product', 'product__category', 'product__unit')
-#     context = {
-#         'bazar_items': bazar_items,
-#         'shop': shop,
-#     }
-#     return render(request, 'inventory/bozordagi_tovarlar.html', context)
 
 
 @require_POST
@@ -1551,3 +1556,52 @@ def bozor_harakatlar(request, shop_id):
     return render(request, 'inventory/bozor_harakatlar.html', context)
 
 
+
+@login_required(login_url='login')
+def qogoz_view(request):
+    from django.contrib import messages
+    from django.db.models import Sum
+    from datetime import date as dt
+
+    products = Product.objects.filter(is_active=True).select_related('unit').order_by('name')
+
+    if request.method == 'POST':
+        product_id     = request.POST.get('product')
+        quantity       = int(request.POST.get('quantity', 0) or 0)
+        qogoz_per_unit = int(request.POST.get('qogoz_per_unit', 1) or 1)
+        date_val       = request.POST.get('date', str(dt.today()))
+        note           = request.POST.get('note', '').strip()
+
+        if product_id and quantity > 0:
+            product = Product.objects.get(pk=product_id)
+
+            # Сохраняем/обновляем норму если изменилась
+            if product.qogoz_per_unit != qogoz_per_unit:
+                product.qogoz_per_unit = qogoz_per_unit
+
+            product.qogoz_stock += quantity
+            product.save()
+
+            QogozRecord.objects.create(
+                product=product,
+                quantity=quantity,
+                record_type='in',
+                date=date_val,
+                note=note,
+            )
+            messages.success(request, f"✅ {product.name} — {quantity} ta qog'oz qo'shildi! (1 donaga: {qogoz_per_unit})")
+
+        return redirect(request.path)
+
+    records = QogozRecord.objects.select_related('product').order_by('-date', '-created_at')[:50]
+    total_qogoz = Product.objects.filter(is_active=True).aggregate(
+        total=Sum('qogoz_stock')
+    )['total'] or 0
+
+    context = {
+        'products': products,
+        'records': records,
+        'total_qogoz': total_qogoz,
+        'today': str(dt.today()),
+    }
+    return render(request, 'inventory/qogoz.html', context)

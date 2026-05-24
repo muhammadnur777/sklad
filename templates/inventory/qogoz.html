@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div style="max-width:700px; margin:20px auto; padding:0 12px;">
+
+    {% if messages %}
+        {% for msg in messages %}
+        <div style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;
+                    border-radius:8px;padding:12px 16px;margin-bottom:16px;font-weight:600;">
+            {{ msg }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Форма добавления -->
+    <div style="background:#1a1a2e;border-radius:12px;padding:24px;margin-bottom:24px;">
+        <h2 style="color:#fff;margin:0 0 20px;">📦 Qog'oz qo'shish</h2>
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="margin-bottom:14px;">
+                <label style="color:#aaa;font-size:13px;display:block;margin-bottom:6px;">Tovar</label>
+    
+    <!-- Поиск прямо в HTML, без JS createElement -->
+                <input type="text" id="productSearch" placeholder="Tovar qidirish..."
+                    style="width:100%;padding:10px 14px;border:1px solid #333;border-radius:8px;
+                        font-size:14px;background:#0f0f23;color:#fff;
+                        box-sizing:border-box;margin-bottom:6px;">
+
+            <select name="product" id="productSelect" required
+                style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #333;
+                    background:#0f0f23;color:#fff;font-size:14px;">
+                <option value="">Tanlang...</option>
+                {% for p in products %}
+                <option value="{{ p.id }}"
+                        data-per-unit="{{ p.qogoz_per_unit }}"
+                        data-per-box="{{ p.per_box }}"
+                        data-stock="{{ p.qogoz_stock }}">
+                    {{ p.name }} — qoldi: {{ p.qogoz_stock }} ta
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+            <div style="margin-bottom:14px;">
+                <label style="color:#aaa;font-size:13px;display:block;margin-bottom:6px;">
+                    1 donaga nechta qog'oz
+                    <span id="perUnitHint" style="color:#2ecc71;margin-left:8px;"></span>
+                </label>
+                <input type="number" name="qogoz_per_unit" id="perUnitInput"
+                       min="1" value="1" required
+                       style="width:100%;padding:10px 14px;border-radius:8px;
+                              border:1px solid #333;background:#0f0f23;color:#fff;font-size:14px;"
+                       oninput="updateCalc()">
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:14px;">
+                <div style="flex:1;">
+                    <label style="color:#aaa;font-size:13px;display:block;margin-bottom:6px;">
+                        Qo'shilayotgan qog'oz soni
+                    </label>
+                    <input type="number" name="quantity" id="qtyInput" min="1" required
+                        style="width:100%;padding:10px 14px;border-radius:8px;
+                               border:1px solid #333;background:#0f0f23;color:#fff;font-size:14px;"
+                        oninput="updateCalc()">
+                </div>
+                <div style="flex:1;">
+                    <label style="color:#aaa;font-size:13px;display:block;margin-bottom:6px;">Sana</label>
+                    <input type="date" name="date" value="{{ today }}" required
+                        style="width:100%;padding:10px 14px;border-radius:8px;
+                               border:1px solid #333;background:#0f0f23;color:#fff;font-size:14px;">
+                </div>
+            </div>
+
+            <div id="calcHint" style="color:#f39c12;font-size:13px;margin-bottom:14px;"></div>
+
+            <div style="margin-bottom:18px;">
+                <label style="color:#aaa;font-size:13px;display:block;margin-bottom:6px;">Izoh (ixtiyoriy)</label>
+                <input type="text" name="note"
+                    style="width:100%;padding:10px 14px;border-radius:8px;
+                           border:1px solid #333;background:#0f0f23;color:#fff;font-size:14px;">
+            </div>
+
+            <button type="submit"
+                style="padding:10px 28px;background:#e94560;color:#fff;
+                       border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;">
+                Saqlash
+            </button>
+        </form>
+    </div>
+
+    <!-- Остатки по товарам -->
+    <div style="background:#0f3460;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span style="font-size:24px;">📦</span>
+            <div>
+                <div style="color:#aaa;font-size:12px;">Umumiy qog'oz qoldig'i</div>
+                <div style="color:#fff;font-size:22px;font-weight:700;">{{ total_qogoz }} ta</div>
+            </div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;">
+            {% for p in products %}
+                {% if p.qogoz_stock > 0 %}
+                <div style="display:flex;justify-content:space-between;
+                            color:#ccc;font-size:13px;padding:3px 0;">
+                    <span>{{ p.name }}</span>
+                    <span>
+                        <b style="color:#fff;">{{ p.qogoz_stock }} ta</b>
+                        <span style="color:#888;margin-left:6px;">
+                            (1 donaga: {{ p.qogoz_per_unit }} ta)
+                        </span>
+                    </span>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- История -->
+    <div style="background:#1a1a2e;border-radius:12px;padding:20px;">
+        <h3 style="color:#fff;margin:0 0 16px;">📋 Tarix</h3>
+        {% if records %}
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <thead>
+                    <tr style="color:#aaa;border-bottom:1px solid #333;text-align:left;">
+                        <th style="padding:8px;">Sana</th>
+                        <th style="padding:8px;">Tovar</th>
+                        <th style="padding:8px;text-align:center;">Turi</th>
+                        <th style="padding:8px;text-align:right;">Soni</th>
+                        <th style="padding:8px;">Izoh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr style="border-bottom:1px solid #222;color:#ddd;">
+                        <td style="padding:8px;">{{ r.date }}</td>
+                        <td style="padding:8px;">{{ r.product.name }}</td>
+                        <td style="padding:8px;text-align:center;">
+                            {% if r.record_type == 'in' %}
+                                <span style="color:#2ecc71;font-weight:600;">↑ Kirim</span>
+                            {% else %}
+                                <span style="color:#e74c3c;font-weight:600;">↓ Chiqim</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:8px;text-align:right;font-weight:700;">{{ r.quantity }}</td>
+                        <td style="padding:8px;color:#888;">{{ r.note }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:#666;">Tarix yo'q</p>
+        {% endif %}
+    </div>
+
+</div>
+{% block extra_js %}
+<script>
+const selectEl   = document.getElementById('productSelect');
+const searchEl   = document.getElementById('productSearch');
+const allOptions = Array.from(selectEl.options);
+
+// ===== ПОИСК =====
+searchEl.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    selectEl.innerHTML = '';
+    allOptions.forEach(opt => {
+        if (!opt.value || opt.textContent.toLowerCase().includes(query)) {
+            selectEl.appendChild(opt.cloneNode(true));
+        }
+    });
+});
+
+// ===== АВТО-НОРМА =====
+selectEl.addEventListener('change', function() {
+    const opt     = this.options[this.selectedIndex];
+    const perUnit = opt.getAttribute('data-per-unit') || 1;
+
+    document.getElementById('perUnitInput').value = perUnit;
+    document.getElementById('perUnitHint').textContent =
+        perUnit > 1 ? `(hozir: 1 ga ${perUnit} ta)` : '';
+
+    updateCalc();
+});
+
+// ===== ПОДСКАЗКА =====
+function updateCalc() {
+    const qty      = parseInt(document.getElementById('qtyInput').value) || 0;
+    const perUnit  = parseInt(document.getElementById('perUnitInput').value) || 1;
+    const select   = document.getElementById('productSelect');
+    const opt      = select.options[select.selectedIndex];
+    const perBox   = parseInt(opt.getAttribute('data-per-box')) || 0;
+    const hint     = document.getElementById('calcHint');
+
+    if (qty > 0 && perUnit > 0 && perBox > 0) {
+        const units = Math.floor(qty / perUnit);       // 10 ÷ 2 = 5 штук
+        const boxes = Math.floor(units / perBox);      // 5 ÷ 5 = 1 коробка
+        hint.textContent = `📦 ${qty} ta qog'ozga → ${units} ta dona → ${boxes} ta korobka uchun yetadi`;
+    } else {
+        hint.textContent = '';
+    }
+}
+</script>
+{% endblock %}
+
+{% endblock %}

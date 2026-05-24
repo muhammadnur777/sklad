@@ -66,6 +66,9 @@ class Product(models.Model):
     def total_value(self):
         return self.stock * self.sell_price
     
+    qogoz_stock = models.IntegerField("Qog'oz qoldig'i", default=0)
+    qogoz_per_unit = models.IntegerField("1 donaga qog'oz", default=1)
+    
 
 class PriceHistory(models.Model):
     product = models.ForeignKey(
@@ -83,3 +86,28 @@ class PriceHistory(models.Model):
 
     def __str__(self):
         return f'{self.product.name}: {self.old_price} → {self.new_price}'
+    
+
+
+
+# Добавь поле в Product (внутри класса Product):
+
+
+# Новая модель — история qog'oz
+class QogozRecord(models.Model):
+    TYPES = [('in', 'Kirim'), ('out', 'Chiqim')]
+
+    product    = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='qogoz_records')
+    quantity   = models.IntegerField("Soni")
+    record_type = models.CharField("Turi", max_length=5, choices=TYPES, default='in')
+    date       = models.DateField("Sana")
+    note       = models.TextField("Izoh", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+        verbose_name = "Qog'oz"
+        verbose_name_plural = "Qog'oz tarixi"
+
+    def __str__(self):
+        return f"{self.product.name} — {self.quantity} ({self.get_record_type_display()})"
