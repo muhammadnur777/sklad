@@ -183,6 +183,12 @@
         <div class="sale-header">
             <div>
                 <span class="sale-date">{{ sale.sale_date }}</span>
+                {% if sale.paid_date %}
+                    <span style="font-size:12px; color:#28a745; margin-left:8px;">
+                        ✅ To'landi: {{ sale.paid_date }}
+                    </span>
+                {% endif %}
+                
                 {% if sale.client_name %}
                     <span class="sale-client"> — {{ sale.client_name }}</span>
                 {% endif %}

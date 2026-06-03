@@ -13,11 +13,9 @@ from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from django.http import HttpResponse
 from finance.models import BazarSaleItem, Shop
 from django.db.models import Sum
-from datetime import date
 from finance.models import BazarSale, Shop, Purchase
 from datetime import date, timedelta
 from finance.models import BazarSale, Shop
-from datetime import date
 from .models import PriceHistory
 from django.db.models import F            # для F('stock')
 from finance.models import Shop, BazarStock  
@@ -25,6 +23,7 @@ from django.db import transaction
 from finance.models import BazarStock, Shop
 from django.contrib import messages
 import math
+
 @login_required(login_url='login')
 def product_list(request):
     from .models import PriceHistory
@@ -580,17 +579,32 @@ def bazar_sale_detail_api(request, sale_id):
     return JsonResponse(data)
 
 
+
 @require_POST
 @login_required(login_url='login')
 def bazar_mark_paid_api(request, sale_id):
-    from finance.models import BazarSale
+    
+    
     try:
         sale = BazarSale.objects.get(pk=sale_id)
         sale.payment_status = 'paid'
+        sale.paid_date = date.today()  # ← автоматически ставим сегодня
         sale.save()
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+# @require_POST
+# @login_required(login_url='login')
+# def bazar_mark_paid_api(request, sale_id):
+#     from finance.models import BazarSale
+#     try:
+#         sale = BazarSale.objects.get(pk=sale_id)
+#         sale.payment_status = 'paid'
+#         sale.save()
+#         return JsonResponse({'ok': True})
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=400)
     
 
 @login_required(login_url='login')
@@ -662,7 +676,7 @@ def xabar_read_api(request):
 def bozor_sotuvlar(request, shop_id):
     from finance.models import BazarSale, BazarSaleItem, Shop
     from django.db.models import Sum
-    from datetime import date
+    
 
     shop = Shop.objects.get(pk=shop_id)
 
@@ -717,7 +731,7 @@ def bozor_sotuvlar(request, shop_id):
 @login_required(login_url='login')
 def bozorga_ketuvlar(request):
     from django.db.models import Sum
-    from datetime import date
+    
     from dateutil.relativedelta import relativedelta
     from finance.models import BozorPayment
 
@@ -1064,7 +1078,7 @@ def dashboard(request):
 def product_stats_api(request, product_id):
     from finance.models import BazarSaleItem, Shop
     from django.db.models import Sum
-    from datetime import date
+    
 
     today = date.today()
 
@@ -1280,7 +1294,7 @@ def payment_history(request):
     from finance.models import BozorPayment, Shop
     from django.http import JsonResponse
     from django.db.models import Sum  # ИСПРАВЛЕНИЕ 1: Не хватало импорта
-    from datetime import date
+    
     import json, calendar
 
     today = date.today()

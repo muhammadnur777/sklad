@@ -202,6 +202,7 @@ class BazarSale(models.Model):
     )
     total_amount = models.IntegerField('Umumiy summa', default=0)
     sale_date = models.DateField('Sotuv sanasi')
+    paid_date = models.DateField("To'lov sanasi", null=True, blank=True)
     note = models.TextField('Izoh', blank=True)
     created_at = models.DateTimeField('Yaratilgan', auto_now_add=True)
 
