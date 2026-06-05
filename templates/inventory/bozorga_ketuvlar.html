@@ -178,19 +178,30 @@
 </div>
 
 <div class="months-row">
-    <a href="/bozorga-ketuvlar/" class="month-btn {% if not current_month and not date_from %}active{% endif %}">Barchasi</a>
+    <a href="/bozorga-ketuvlar/" class="month-btn {% if not current_month and not date_from %}active{% endif %}">
+        Barchasi
+    </a>
+
     {% for m in months_list %}
-    <a href="?month={{ m.key }}" class="month-btn {% if current_month == m.key %}active{% endif %}">{{ m.label }}</a>
+    <a href="?month={{ m.key }}{% if shop_filter %}&shop={{ shop_filter }}{% endif %}"
+       class="month-btn {% if current_month == m.key %}active{% endif %}">
+        {{ m.label }}
+    </a>
     {% endfor %}
 </div>
 
 <div class="filter-row">
     <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+
+        <input type="hidden" name="shop" value="{{ shop_filter }}">
+        <input type="hidden" name="month" value="{{ current_month }}">
+
         <input type="date" name="date_from" value="{{ date_from }}">
         <input type="date" name="date_to" value="{{ date_to }}">
         <button type="submit">Filtrlash</button>
         <a href="/bozorga-ketuvlar/">Tozalash</a>
     </form>
+
     <button class="btn-delete-old" onclick="openDeleteModal()">Eski yozuvlarni o'chirish</button>
 </div>
 

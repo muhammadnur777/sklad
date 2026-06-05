@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from .models import Product, Category, Unit, QogozRecord
 from finance.models import Purchase, PurchaseItem, StockMovement
+from dateutil.relativedelta import relativedelta
+from finance.models import BozorPayment
 import json
 from django.views.decorators.http import require_POST
 from django.db.models import F
@@ -594,17 +596,7 @@ def bazar_mark_paid_api(request, sale_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
-# @require_POST
-# @login_required(login_url='login')
-# def bazar_mark_paid_api(request, sale_id):
-#     from finance.models import BazarSale
-#     try:
-#         sale = BazarSale.objects.get(pk=sale_id)
-#         sale.payment_status = 'paid'
-#         sale.save()
-#         return JsonResponse({'ok': True})
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)}, status=400)
+
     
 
 @login_required(login_url='login')
@@ -730,10 +722,6 @@ def bozor_sotuvlar(request, shop_id):
 
 @login_required(login_url='login')
 def bozorga_ketuvlar(request):
-    from django.db.models import Sum
-    
-    from dateutil.relativedelta import relativedelta
-    from finance.models import BozorPayment
 
     # Berilgan pul — сначала обрабатываем POST
     if request.method == 'POST' and 'payment_amount' in request.POST:
@@ -826,22 +814,34 @@ def bozorga_ketuvlar(request):
             'month_sum': sh_month,
         })
 
+        # Месяцы с апреля 2026 до текущего
+    # Если сегодня >= 30 число — добавляем следующий месяц
     months_list = []
-    current = date.today()
-    for i in range(7):
-        m = current.month + i
-        y = current.year
+    start_year, start_month = 2026, 4  # апрель 2026 — начало проекта
+
+    today = date.today()
+    if today.day >= 30:
+        end = today + relativedelta(months=1)
+    else:
+        end = today
+
+    y, m = start_year, start_month
+    while (y, m) <= (end.year, end.month):
+        months_list.append({
+            'key': f'{y}-{m:02d}',
+            'label': f'{month_names[m]} {y}'
+        })
+        m += 1
         if m > 12:
-            m -= 12
+            m = 1
             y += 1
-        key = f'{y}-{m:02d}'
-        label = f'{month_names[m]} {y}'
-        months_list.append({'key': key, 'label': label})
+
+    months_list.reverse()  # сначала новые
 
     XITOY_CATEGORIES = ['Detskiy', 'Hoz tovar']
 
     sales_data = []
-    for sale in sales[:100]:
+    for sale in sales.order_by('-sale_date'): 
         xitoy_items = []
         seh_items = []
         xitoy_total = 0
